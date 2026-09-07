@@ -127,6 +127,32 @@ function UserPlusIcon() {
     );
 }
 
+function KeyIcon() {
+    return (
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            className="h-5 w-5"
+        >
+            <circle cx="8" cy="15" r="4" />
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M11 12l8-8m0 0h-3m3 0v3"
+            />
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M14 9l2 2"
+            />
+        </svg>
+    );
+}
+
+
 function LogOutIcon() {
     return (
         <svg
@@ -221,8 +247,8 @@ function NavItem({
             href={href}
             onClick={onClick}
             className={`group relative flex items - center gap - 3 rounded - xl px - 3 py - 3 text - sm font - medium transition - all duration - 200 ${active
-                    ? "bg-green-50 text-green-700 shadow-sm"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                ? "bg-green-50 text-green-700 shadow-sm"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 } `}
         >
             {active && (
@@ -231,8 +257,8 @@ function NavItem({
 
             <span
                 className={`flex h - 9 w - 9 shrink - 0 items - center justify - center rounded - lg transition ${active
-                        ? "bg-green-600 text-white shadow-md shadow-green-600/20"
-                        : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
+                    ? "bg-green-600 text-white shadow-md shadow-green-600/20"
+                    : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
                     } `}
             >
                 {icon}
@@ -243,8 +269,8 @@ function NavItem({
             {badge && (
                 <span
                     className={`rounded - full px - 2 py - 0.5 text - [10px] font - semibold ${active
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-500"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-500"
                         } `}
                 >
                     {badge}
@@ -427,6 +453,27 @@ export default function Sidebar({
                             <span className="h-2 w-2 rounded-full bg-green-500 shadow-sm shadow-green-500/50" />
                         </div>
                     </div>
+                    
+                    {/* Change Password */}
+                    <Link
+                        href="/account/change-password"
+                        onClick={handleNavigation}
+                        className={`group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition-all duration-200 ${isActive("/account/change-password")
+                                ? "bg-green-50 text-green-700"
+                                : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                            }`}
+                    >
+                        <span
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${isActive("/account/change-password")
+                                    ? "bg-green-100 text-green-600"
+                                    : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
+                                }`}
+                        >
+                            <KeyIcon />
+                        </span>
+
+                        <span className="flex-1">Change Password</span>
+                    </Link>
 
                     {/* Logout */}
                     <button

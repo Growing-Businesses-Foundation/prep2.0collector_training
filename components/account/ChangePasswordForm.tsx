@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { Eye, EyeOff, LockKeyhole, ShieldCheck } from "lucide-react";
+import BackButton from "@/components/navigation/BackButton";
 
 interface PasswordFieldProps {
     label: string;
@@ -134,6 +135,10 @@ export default function ChangePasswordForm() {
             <div className="mb-6">
                 <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-green-100">
                     <ShieldCheck className="h-6 w-6 text-green-700" />
+                </div>
+
+                <div className="mb-4">
+                    <BackButton label="Back to Dashboard" />
                 </div>
 
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">
