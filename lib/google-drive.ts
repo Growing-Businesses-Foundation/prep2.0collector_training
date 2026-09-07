@@ -1,14 +1,20 @@
 import { google } from "googleapis";
-import path from "path";
 import { Readable } from "stream";
 
-const keyFile = path.join(
-    process.cwd(),
-    "google-drive-service-account.json"
-);
+const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+if (!clientEmail || !privateKey) {
+    throw new Error(
+        "Google service account credentials are not configured."
+    );
+}
 
 const auth = new google.auth.GoogleAuth({
-    keyFile,
+    credentials: {
+        client_email: clientEmail,
+        private_key: privateKey.replace(/\\n/g, "\n"),
+    },
     scopes: ["https://www.googleapis.com/auth/drive"],
 });
 
@@ -47,7 +53,6 @@ export async function uploadTrainingPhoto({
 
         fields: "id,name,mimeType,webViewLink",
 
-        // Important for Shared Drives
         supportsAllDrives: true,
     });
 
