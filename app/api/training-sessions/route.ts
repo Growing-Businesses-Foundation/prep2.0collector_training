@@ -19,42 +19,78 @@ export async function POST(request: Request) {
         const formData = await request.formData();
 
         const trainingDate =
-            formData.get("trainingDate")?.toString();
+            formData.get("trainingDate")?.toString().trim();
 
         const fieldOfficerId =
-            formData.get("fieldOfficerId")?.toString();
+            formData.get("fieldOfficerId")?.toString().trim();
 
         const clusterName =
-            formData.get("clusterName")?.toString();
+            formData.get("clusterName")?.toString().trim();
 
         const lga =
-            formData.get("lga")?.toString();
+            formData.get("lga")?.toString().trim();
 
         const community =
-            formData.get("community")?.toString();
+            formData.get("community")?.toString().trim();
 
         const venue =
-            formData.get("venue")?.toString();
+            formData.get("venue")?.toString().trim();
 
         const facilitator =
-            formData.get("facilitator")?.toString();
+            formData.get("facilitator")?.toString().trim();
 
         const expectedCollectors =
             formData
                 .get("expectedCollectors")
-                ?.toString();
+                ?.toString()
+                .trim();
 
         const latitude =
-            formData.get("latitude")?.toString();
+            formData.get("latitude")?.toString().trim();
 
         const longitude =
-            formData.get("longitude")?.toString();
+            formData.get("longitude")?.toString().trim();
 
         const photo = formData.get("photo");
 
-        let assignedFieldOfficerId: string;
+        // ====================================================
+        // BASIC FIELD OFFICER VALIDATION
+        // ====================================================
 
-        if (user.role === "ADMIN") {
+        let assignedFieldOfficerId: string;
+        let fieldOfficerName: string;
+
+        if (user.role === "WRITE") {
+            /*
+             * WRITE users are already authenticated and their
+             * Field Officer ID is stored in the session.
+             *
+             * Do not query field_officers just to validate them.
+             */
+
+            if (!user.foId) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "Your account is not assigned to a Field Officer ID.",
+                    },
+                    { status: 403 }
+                );
+            }
+
+            assignedFieldOfficerId =
+                String(user.foId).trim();
+
+            fieldOfficerName =
+                user.name || "Field Officer";
+        } else {
+            /*
+             * ADMIN users can select a Field Officer.
+             * Validate the selected Field Officer against
+             * the field_officers collection.
+             */
+
             if (!fieldOfficerId) {
                 return NextResponse.json(
                     {
@@ -67,24 +103,45 @@ export async function POST(request: Request) {
             }
 
             assignedFieldOfficerId =
-                fieldOfficerId;
-        } else {
-            if (!user.foId) {
+                fieldOfficerId.trim();
+
+            const client = await clientPromise;
+
+            const db = client.db(
+                process.env.MONGODB_DB
+            );
+
+            const fieldOfficer =
+                await db
+                    .collection("field_officers")
+                    .findOne({
+                        foId:
+                            assignedFieldOfficerId,
+                        isActive: true,
+                    });
+
+            if (!fieldOfficer) {
                 return NextResponse.json(
                     {
                         success: false,
                         message:
-                            "Your account is not assigned to a Field Officer ID.",
+                            "Field Officer not found or inactive.",
                     },
-                    { status: 403 }
+                    { status: 404 }
                 );
             }
 
-            assignedFieldOfficerId = user.foId;
+            fieldOfficerName =
+                fieldOfficer.name;
         }
+
+        // ====================================================
+        // REQUIRED FIELD VALIDATION
+        // ====================================================
 
         if (
             !trainingDate ||
+            !assignedFieldOfficerId ||
             !clusterName ||
             !lga ||
             !community ||
@@ -103,6 +160,10 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
+
+        // ====================================================
+        // EXPECTED COLLECTORS
+        // ====================================================
 
         const expectedCollectorsNumber =
             Number(expectedCollectors);
@@ -123,8 +184,15 @@ export async function POST(request: Request) {
             );
         }
 
-        const latitudeNumber = Number(latitude);
-        const longitudeNumber = Number(longitude);
+        // ====================================================
+        // LOCATION VALIDATION
+        // ====================================================
+
+        const latitudeNumber =
+            Number(latitude);
+
+        const longitudeNumber =
+            Number(longitude);
 
         if (
             !Number.isFinite(latitudeNumber) ||
@@ -139,6 +207,38 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
+
+        if (
+            latitudeNumber < -90 ||
+            latitudeNumber > 90
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Latitude must be between -90 and 90.",
+                },
+                { status: 400 }
+            );
+        }
+
+        if (
+            longitudeNumber < -180 ||
+            longitudeNumber > 180
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Longitude must be between -180 and 180.",
+                },
+                { status: 400 }
+            );
+        }
+
+        // ====================================================
+        // PHOTO VALIDATION
+        // ====================================================
 
         if (!(photo instanceof File)) {
             return NextResponse.json(
@@ -173,40 +273,38 @@ export async function POST(request: Request) {
             );
         }
 
+        // ====================================================
+        // DATABASE
+        // ====================================================
+
         const client = await clientPromise;
+
         const db = client.db(
             process.env.MONGODB_DB
         );
 
-        const fieldOfficer = await db
-            .collection("field_officers")
-            .findOne({
-                foId: assignedFieldOfficerId,
-                isActive: true,
-            });
-
-        if (!fieldOfficer) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "Field Officer not found or inactive.",
-                },
-                { status: 404 }
-            );
-        }
+        // ====================================================
+        // GOOGLE DRIVE UPLOAD
+        // ====================================================
 
         const photoBuffer = Buffer.from(
             await photo.arrayBuffer()
         );
 
         const safeFieldOfficerName =
-            fieldOfficer.name
+            fieldOfficerName
                 .replace(/[^a-zA-Z0-9]+/g, "-")
                 .replace(/^-|-$/g, "");
 
+        const safePhotoName =
+            photo.name
+                .replace(
+                    /[^a-zA-Z0-9._-]+/g,
+                    "-"
+                );
+
         const fileName =
-            `training-${trainingDate}-${safeFieldOfficerName}-${Date.now()}-${photo.name}`;
+            `training-${trainingDate}-${safeFieldOfficerName}-${Date.now()}-${safePhotoName}`;
 
         const uploadedPhoto =
             await uploadTrainingPhoto({
@@ -221,44 +319,52 @@ export async function POST(request: Request) {
             );
         }
 
+        // ====================================================
+        // CREATE TRAINING SESSION
+        // ====================================================
+
         const now = new Date();
 
-        const result = await db
-            .collection("training_sessions")
-            .insertOne({
-                trainingDate,
+        const result =
+            await db
+                .collection("training_sessions")
+                .insertOne({
+                    trainingDate,
 
-                fieldOfficerId:
-                    fieldOfficer.foId,
+                    fieldOfficerId:
+                        assignedFieldOfficerId,
 
-                fieldOfficerName:
-                    fieldOfficer.name,
+                    fieldOfficerName:
+                        fieldOfficerName,
 
-                clusterName,
-                lga,
-                community,
-                venue,
-                facilitator,
+                    clusterName,
+                    lga,
+                    community,
+                    venue,
+                    facilitator,
 
-                // System-generated initial status.
-                trainingStatus: "Not Started",
+                    trainingStatus:
+                        "Not Started",
 
-                expectedCollectors:
-                    expectedCollectorsNumber,
+                    expectedCollectors:
+                        expectedCollectorsNumber,
 
-                latitude: latitudeNumber,
-                longitude: longitudeNumber,
+                    latitude:
+                        latitudeNumber,
 
-                photoFileId:
-                    uploadedPhoto.id,
+                    longitude:
+                        longitudeNumber,
 
-                photoUrl:
-                    uploadedPhoto.webViewLink ||
-                    null,
+                    photoFileId:
+                        uploadedPhoto.id,
 
-                createdAt: now,
-                updatedAt: now,
-            });
+                    photoUrl:
+                        uploadedPhoto.webViewLink ||
+                        null,
+
+                    createdAt: now,
+                    updatedAt: now,
+                });
 
         // ====================================================
         // AUDIT LOG
@@ -266,30 +372,37 @@ export async function POST(request: Request) {
 
         await logActivity({
             userId: user.id,
-            userName: user.name ?? undefined,
-            userEmail: user.email ?? undefined,
+            userName:
+                user.name ?? undefined,
+            userEmail:
+                user.email ?? undefined,
 
-            action: "TRAINING_CREATED",
+            action:
+                "TRAINING_CREATED",
 
-            resource: "training_session",
+            resource:
+                "training_session",
 
             resourceId:
                 result.insertedId.toString(),
 
             description:
-                `Created training session for ${fieldOfficer.name} - ${clusterName}`,
+                `Created training session for ${fieldOfficerName} - ${clusterName}`,
 
             metadata: {
                 trainingDate,
+
                 fieldOfficerId:
-                    fieldOfficer.foId,
-                fieldOfficerName:
-                    fieldOfficer.name,
+                    assignedFieldOfficerId,
+
+                fieldOfficerName,
+
                 clusterName,
                 lga,
                 community,
                 venue,
                 facilitator,
+
                 expectedCollectors:
                     expectedCollectorsNumber,
             },
@@ -297,16 +410,19 @@ export async function POST(request: Request) {
 
         return NextResponse.json({
             success: true,
+
             message:
                 "Training session created successfully.",
+
             trainingSessionId:
                 result.insertedId.toString(),
+
             photoFileId:
                 uploadedPhoto.id,
         });
     } catch (error) {
         console.error(
-            "Training session creation error:",
+            "[TRAINING] Training session creation error:",
             error
         );
 
@@ -321,6 +437,11 @@ export async function POST(request: Request) {
     }
 }
 
+
+// ============================================================
+// GET TRAINING SESSIONS
+// ============================================================
+
 export async function GET() {
     const { user, error } = await requireRole([
         "ADMIN",
@@ -334,6 +455,7 @@ export async function GET() {
 
     try {
         const client = await clientPromise;
+
         const db = client.db(
             process.env.MONGODB_DB
         );
@@ -346,51 +468,57 @@ export async function GET() {
                 }
                 : {};
 
-        const sessions = await db
-            .collection("training_sessions")
-            .find(query)
-            .sort({
-                trainingDate: -1,
-                createdAt: -1,
-            })
-            .project({
-                _id: 1,
-                trainingDate: 1,
-                fieldOfficerId: 1,
-                fieldOfficerName: 1,
-                clusterName: 1,
-                lga: 1,
-                community: 1,
-                venue: 1,
-                expectedCollectors: 1,
-                trainingStatus: 1,
-            })
-            .toArray();
+        const sessions =
+            await db
+                .collection("training_sessions")
+                .find(query)
+                .sort({
+                    trainingDate: -1,
+                    createdAt: -1,
+                })
+                .project({
+                    _id: 1,
+                    trainingDate: 1,
+                    fieldOfficerId: 1,
+                    fieldOfficerName: 1,
+                    clusterName: 1,
+                    lga: 1,
+                    community: 1,
+                    venue: 1,
+                    expectedCollectors: 1,
+                    trainingStatus: 1,
+                })
+                .toArray();
 
-        const sessionIds = sessions.map(
-            (session) => session._id
-        );
+        const sessionIds =
+            sessions.map(
+                (session) =>
+                    session._id
+            );
 
-        const collectorCounts = await db
-            .collection("collectors")
-            .aggregate([
-                {
-                    $match: {
-                        trainingSessionId: {
-                            $in: sessionIds,
+        const collectorCounts =
+            await db
+                .collection("collectors")
+                .aggregate([
+                    {
+                        $match: {
+                            trainingSessionId: {
+                                $in:
+                                    sessionIds,
+                            },
                         },
                     },
-                },
-                {
-                    $group: {
-                        _id: "$trainingSessionId",
-                        count: {
-                            $sum: 1,
+                    {
+                        $group: {
+                            _id:
+                                "$trainingSessionId",
+                            count: {
+                                $sum: 1,
+                            },
                         },
                     },
-                },
-            ])
-            .toArray();
+                ])
+                .toArray();
 
         const collectorCountMap =
             new Map(
@@ -403,77 +531,85 @@ export async function GET() {
             );
 
         const formattedSessions =
-            sessions.map((session) => {
-                const recordedCollectors =
-                    collectorCountMap.get(
-                        session._id.toString()
-                    ) || 0;
+            sessions.map(
+                (session) => {
+                    const recordedCollectors =
+                        collectorCountMap.get(
+                            session._id.toString()
+                        ) || 0;
 
-                const expectedCollectors =
-                    Number(
-                        session.expectedCollectors ||
+                    const expectedCollectors =
+                        Number(
+                            session.expectedCollectors ||
+                            0
+                        );
+
+                    let trainingStatus:
+                        | "Not Started"
+                        | "In Progress"
+                        | "Completed";
+
+                    if (
+                        expectedCollectors >
+                        0 &&
+                        recordedCollectors >=
+                        expectedCollectors
+                    ) {
+                        trainingStatus =
+                            "Completed";
+                    } else if (
+                        recordedCollectors >
                         0
-                    );
+                    ) {
+                        trainingStatus =
+                            "In Progress";
+                    } else {
+                        trainingStatus =
+                            "Not Started";
+                    }
 
-                let trainingStatus:
-                    | "Not Started"
-                    | "In Progress"
-                    | "Completed";
+                    return {
+                        id:
+                            session._id.toString(),
 
-                if (
-                    expectedCollectors > 0 &&
-                    recordedCollectors >=
-                    expectedCollectors
-                ) {
-                    trainingStatus =
-                        "Completed";
-                } else if (
-                    recordedCollectors > 0
-                ) {
-                    trainingStatus =
-                        "In Progress";
-                } else {
-                    trainingStatus =
-                        "Not Started";
+                        trainingDate:
+                            session.trainingDate,
+
+                        fieldOfficerId:
+                            session.fieldOfficerId,
+
+                        fieldOfficerName:
+                            session.fieldOfficerName,
+
+                        clusterName:
+                            session.clusterName,
+
+                        lga:
+                            session.lga,
+
+                        community:
+                            session.community,
+
+                        venue:
+                            session.venue,
+
+                        expectedCollectors,
+
+                        recordedCollectors,
+
+                        trainingStatus,
+                    };
                 }
-
-                return {
-                    id: session._id.toString(),
-
-                    trainingDate:
-                        session.trainingDate,
-
-                    fieldOfficerId:
-                        session.fieldOfficerId,
-
-                    fieldOfficerName:
-                        session.fieldOfficerName,
-
-                    clusterName:
-                        session.clusterName,
-
-                    lga: session.lga,
-
-                    community:
-                        session.community,
-
-                    venue: session.venue,
-
-                    expectedCollectors,
-
-                    recordedCollectors,
-
-                    trainingStatus,
-                };
-            });
+            );
 
         return NextResponse.json({
             success: true,
-            sessions: formattedSessions,
+            sessions:
+                formattedSessions,
         });
     } catch (error) {
         console.error(
-            "Training sessions retrieval error:",
+            "[TRAINING] Training sessions retrieval error:",
             error
         );
 
