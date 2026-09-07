@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 
 interface TrainingFormProps {
     role: "ADMIN" | "WRITE" | "READ_ONLY";
@@ -84,6 +84,28 @@ function CameraIcon() {
     );
 }
 
+function ImageIcon() {
+    return (
+        <svg
+            className="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+        >
+            <rect
+                x="3"
+                y="3"
+                width="18"
+                height="18"
+                rx="2"
+            />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
+        </svg>
+    );
+}
+
 function CheckIcon() {
     return (
         <svg
@@ -109,22 +131,6 @@ function MapPinIcon() {
         >
             <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1116 0z" />
             <circle cx="12" cy="10" r="2.5" />
-        </svg>
-    );
-}
-
-function UploadIcon() {
-    return (
-        <svg
-            className="h-6 w-6"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-        >
-            <path d="M12 16V4" />
-            <path d="M7 9l5-5 5 5" />
-            <path d="M5 20h14" />
         </svg>
     );
 }
@@ -213,7 +219,9 @@ function InputField({
     id: string;
     label: string;
     value: string;
-    onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    onChange?: (
+        event: React.ChangeEvent<HTMLInputElement>
+    ) => void;
     placeholder?: string;
     type?: string;
     required?: boolean;
@@ -260,32 +268,63 @@ function InputField({
     );
 }
 
-
-
 export default function TrainingForm({
     role,
     foId,
     foName,
 }: TrainingFormProps) {
-    const [trainingDate, setTrainingDate] = useState("");
-    const [fieldOfficerId, setFieldOfficerId] = useState(
-        foId || ""
-    );
-    const [clusterName, setClusterName] = useState("");
-    const [lga, setLga] = useState("");
-    const [community, setCommunity] = useState("");
-    const [venue, setVenue] = useState("");
-    const [facilitator, setFacilitator] = useState("");
-    const [photo, setPhoto] = useState<File | null>(null);
-    const [photoPreview, setPhotoPreview] = useState("");
+    const [trainingDate, setTrainingDate] =
+        useState("");
+
+    const [fieldOfficerId, setFieldOfficerId] =
+        useState(foId || "");
+
+    const [clusterName, setClusterName] =
+        useState("");
+
+    const [lga, setLga] =
+        useState("");
+
+    const [community, setCommunity] =
+        useState("");
+
+    const [venue, setVenue] =
+        useState("");
+
+    const [facilitator, setFacilitator] =
+        useState("");
+
+    const [photo, setPhoto] =
+        useState<File | null>(null);
+
+    const [photoPreview, setPhotoPreview] =
+        useState("");
+
     const [expectedCollectors, setExpectedCollectors] =
         useState("");
 
-    const [latitude, setLatitude] = useState("");
-    const [longitude, setLongitude] = useState("");
+    const [latitude, setLatitude] =
+        useState("");
+
+    const [longitude, setLongitude] =
+        useState("");
+
     const [locationLoading, setLocationLoading] =
         useState(false);
-    const [submitting, setSubmitting] = useState(false);
+
+    const [submitting, setSubmitting] =
+        useState(false);
+
+    // Separate refs for camera and gallery.
+    const cameraInputRef =
+        useRef<HTMLInputElement>(null);
+
+    const galleryInputRef =
+        useRef<HTMLInputElement>(null);
+
+    // ============================================================
+    // LOCATION
+    // ============================================================
 
     function captureLocation() {
         if (!navigator.geolocation) {
@@ -310,7 +349,10 @@ export default function TrainingForm({
                 setLocationLoading(false);
             },
             (error) => {
-                console.error("Location error:", error);
+                console.error(
+                    "Location error:",
+                    error
+                );
 
                 alert(
                     "Unable to get your location. Please allow location access and try again."
@@ -326,35 +368,90 @@ export default function TrainingForm({
         );
     }
 
+    // ============================================================
+    // PHOTO HANDLING
+    // ============================================================
+
     function handlePhotoChange(
         event: React.ChangeEvent<HTMLInputElement>
     ) {
-        const file = event.target.files?.[0];
+        const file =
+            event.target.files?.[0];
 
         if (!file) {
             return;
         }
 
         if (!file.type.startsWith("image/")) {
-            alert("Please select an image file.");
+            alert(
+                "Please select an image file."
+            );
+
+            event.target.value = "";
             return;
         }
 
-        if (file.size > 10 * 1024 * 1024) {
-            alert("Photo must be less than 10MB.");
+        if (
+            file.size >
+            10 * 1024 * 1024
+        ) {
+            alert(
+                "Photo must be less than 10MB."
+            );
+
+            event.target.value = "";
             return;
         }
+
+        // Release previous preview URL.
+        if (photoPreview) {
+            URL.revokeObjectURL(
+                photoPreview
+            );
+        }
+
+        const previewUrl =
+            URL.createObjectURL(file);
 
         setPhoto(file);
-
-        const previewUrl = URL.createObjectURL(file);
         setPhotoPreview(previewUrl);
     }
+
+    function removePhoto() {
+        if (photoPreview) {
+            URL.revokeObjectURL(
+                photoPreview
+            );
+        }
+
+        setPhoto(null);
+        setPhotoPreview("");
+
+        if (cameraInputRef.current) {
+            cameraInputRef.current.value =
+                "";
+        }
+
+        if (galleryInputRef.current) {
+            galleryInputRef.current.value =
+                "";
+        }
+    }
+
+    // ============================================================
+    // SUBMIT
+    // ============================================================
+
 
     async function handleSubmit(
         event: FormEvent<HTMLFormElement>
     ) {
         event.preventDefault();
+
+        // Prevent accidental double submission
+        if (submitting) {
+            return;
+        }
 
         if (!latitude || !longitude) {
             alert(
@@ -370,16 +467,23 @@ export default function TrainingForm({
             return;
         }
 
+        if (
+            !expectedCollectors ||
+            Number(expectedCollectors) <= 0
+        ) {
+            alert(
+                "Please enter the expected number of collectors."
+            );
+            return;
+        }
+
         try {
             setSubmitting(true);
 
             const formData = new FormData();
 
             formData.append("trainingDate", trainingDate);
-            formData.append(
-                "fieldOfficerId",
-                fieldOfficerId
-            );
+            formData.append("fieldOfficerId", fieldOfficerId);
             formData.append("clusterName", clusterName);
             formData.append("lga", lga);
             formData.append("community", community);
@@ -404,413 +508,667 @@ export default function TrainingForm({
             formData.append("photo", photo);
 
             const response = await fetch(
-                "/api/training-sessions",
+                `${window.location.origin}/api/training-sessions`,
                 {
                     method: "POST",
                     body: formData,
                 }
             );
 
-            const data = await response.json();
+            /*
+             * Read the response as text first.
+             *
+             * This prevents response.json() itself from throwing
+             * if the connection closes before a valid JSON body
+             * is received.
+             */
+            const responseText = await response.text();
+
+            let data: {
+                success?: boolean;
+                message?: string;
+                trainingSessionId?: string;
+                photoFileId?: string;
+            } = {};
+
+            try {
+                data = responseText
+                    ? JSON.parse(responseText)
+                    : {};
+            } catch {
+                console.error(
+                    "Invalid JSON response:",
+                    responseText
+                );
+            }
 
             if (!response.ok) {
                 alert(
                     data.message ||
-                    "Failed to create training session."
+                    `Failed to create training session. (${response.status})`
                 );
                 return;
             }
 
-            alert(
-                `Training session created successfully.\n\nSession ID: ${data.trainingSessionId}`
-            );
+            /*
+             * The server completed successfully.
+             */
+            if (data.success) {
+                alert(
+                    `Training session created successfully.\n\nSession ID: ${data.trainingSessionId || "Created successfully"} `
+                );
 
-            setTrainingDate("");
-            setClusterName("");
-            setLga("");
-            setCommunity("");
-            setVenue("");
-            setFacilitator("");
-            setExpectedCollectors("");
-            setLatitude("");
-            setLongitude("");
-            setPhoto(null);
-            setPhotoPreview("");
+                // Reset form
+                setTrainingDate("");
+                setClusterName("");
+                setLga("");
+                setCommunity("");
+                setVenue("");
+                setFacilitator("");
+                setExpectedCollectors("");
+                setLatitude("");
+                setLongitude("");
 
-            if (role === "ADMIN") {
-                setFieldOfficerId("");
+                removePhoto();
+
+                if (role === "ADMIN") {
+                    setFieldOfficerId("");
+                }
+
+                console.log(
+                    "Training session created:",
+                    data
+                );
+
+                return;
             }
 
-            console.log("Training session:", data);
+            /*
+             * Server responded but did not indicate success.
+             */
+            alert(
+                data.message ||
+                "Training session could not be created."
+            );
+
         } catch (error) {
             console.error(
                 "Training submission error:",
                 error
             );
 
-            alert("Something went wrong. Please try again.");
+            if (error instanceof TypeError) {
+                alert(
+                    `Network error: ${error.message} \n\nPlease check your connection to the training server.`
+                );
+            } else {
+                alert(
+                    "Something went wrong while saving the training session."
+                );
+            }
         } finally {
             setSubmitting(false);
         }
-    }
 
-    return (
-        <form
-            onSubmit={handleSubmit}
-            className="space-y-6"
-        >
-            {/* Main Information */}
-            <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                <div className="h-1 bg-linear-to-r from-green-600 via-green-500 to-orange-400" />
 
-                <div className="p-6 md:p-8">
-                    <SectionHeader
-                        icon={<CalendarIcon />}
-                        title="Training Information"
-                        description="Enter the details for this collector training session."
+        /*
+         * IMPORTANT:
+         * At this point we cannot know whether the server
+         * completed the operation or the request failed before
+         * reaching the server.
+         */
+    //     alert(
+    //         "The connection was interrupted while saving the training session. Please check your Training page before submitting again."
+    //     );
+    // } finally {
+    //     setSubmitting(false);
+    // }
+}
+
+
+return (
+    <form
+        onSubmit={handleSubmit}
+        className="space-y-6"
+    >
+        {/* ====================================================
+                MAIN INFORMATION
+            ==================================================== */}
+
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <div className="h-1 bg-linear-to-r from-green-600 via-green-500 to-orange-400" />
+
+            <div className="p-6 md:p-8">
+                <SectionHeader
+                    icon={
+                        <CalendarIcon />
+                    }
+                    title="Training Information"
+                    description="Enter the details for this collector training session."
+                />
+
+                <div className="grid gap-5 md:grid-cols-2">
+                    <InputField
+                        id="trainingDate"
+                        label="Training Date"
+                        type="date"
+                        value={
+                            trainingDate
+                        }
+                        onChange={(
+                            event
+                        ) =>
+                            setTrainingDate(
+                                event
+                                    .target
+                                    .value
+                            )
+                        }
+                        icon={
+                            <CalendarIcon />
+                        }
                     />
 
-                    <div className="grid gap-5 md:grid-cols-2">
-                        <InputField
-                            id="trainingDate"
-                            label="Training Date"
-                            type="date"
-                            value={trainingDate}
-                            onChange={(event) =>
-                                setTrainingDate(
-                                    event.target.value
-                                )
-                            }
-                            icon={<CalendarIcon />}
-                        />
+                    {/* Field Officer */}
+                    <div>
+                        <label
+                            htmlFor="fieldOfficer"
+                            className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700"
+                        >
+                            <span className="text-gray-400">
+                                <UserIcon />
+                            </span>
 
-                        {/* Field Officer */}
-                        <div>
-                            <label
-                                htmlFor="fieldOfficer"
-                                className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700"
-                            >
-                                <span className="text-gray-400">
-                                    <UserIcon />
-                                </span>
+                            Field Officer
 
-                                Field Officer
-                                <span className="text-orange-500">*</span>
-                            </label>
+                            <span className="text-orange-500">
+                                *
+                            </span>
+                        </label>
 
-                            {role === "WRITE" ? (
-                                <>
-                                    <div className="flex items-center gap-3 rounded-xl border border-green-100 bg-green-50/60 px-4 py-3">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 text-green-600">
-                                            <UserIcon />
-                                        </div>
-
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-semibold text-gray-800">
-                                                {foName ||
-                                                    foId ||
-                                                    "Assigned Field Officer"}
-                                            </p>
-
-                                            {foName &&
-                                                foId && (
-                                                    <p className="mt-0.5 text-xs text-gray-500">
-                                                        ID:{" "}
-                                                        {
-                                                            foId
-                                                        }
-                                                    </p>
-                                                )}
-                                        </div>
-
-                                        <span className="ml-auto rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
-                                            Assigned
-                                        </span>
+                        {role ===
+                            "WRITE" ? (
+                            <>
+                                <div className="flex items-center gap-3 rounded-xl border border-green-100 bg-green-50/60 px-4 py-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 text-green-600">
+                                        <UserIcon />
                                     </div>
 
-                                    <p className="mt-2 text-xs text-gray-500">
-                                        Automatically assigned
-                                        from your account.
-                                    </p>
-                                </>
-                            ) : (
-                                <InputField
-                                    id="fieldOfficer"
-                                    label=""
-                                    value={
-                                        fieldOfficerId
-                                    }
-                                    onChange={(event) =>
-                                        setFieldOfficerId(
-                                            event.target
-                                                .value
-                                        )
-                                    }
-                                    placeholder="Enter Field Officer ID"
-                                />
-                            )}
-                        </div>
+                                    <div className="min-w-0">
+                                        <p className="truncate text-sm font-semibold text-gray-800">
+                                            {foName ||
+                                                foId ||
+                                                "Assigned Field Officer"}
+                                        </p>
 
-                        <InputField
-                            id="clusterName"
-                            label="Cluster Name"
-                            value={clusterName}
-                            onChange={(event) =>
-                                setClusterName(
-                                    event.target.value
-                                )
-                            }
-                            placeholder="e.g. FO 1, C1"
-                        />
+                                        {foName &&
+                                            foId && (
+                                                <p className="mt-0.5 text-xs text-gray-500">
+                                                    ID:{" "}
+                                                    {
+                                                        foId
+                                                    }
+                                                </p>
+                                            )}
+                                    </div>
 
-                        <InputField
-                            id="lga"
-                            label="LGA"
-                            value={lga}
-                            onChange={(event) =>
-                                setLga(event.target.value)
-                            }
-                            placeholder="Enter LGA"
-                        />
-
-                        <InputField
-                            id="community"
-                            label="Community"
-                            value={community}
-                            onChange={(event) =>
-                                setCommunity(
-                                    event.target.value
-                                )
-                            }
-                            placeholder="Enter community name"
-                        />
-
-                        <InputField
-                            id="venue"
-                            label="Training Venue"
-                            value={venue}
-                            onChange={(event) =>
-                                setVenue(event.target.value)
-                            }
-                            placeholder="Enter training venue"
-                        />
-
-                        <InputField
-                            id="facilitator"
-                            label="Training Facilitator"
-                            value={facilitator}
-                            onChange={(event) =>
-                                setFacilitator(
-                                    event.target.value
-                                )
-                            }
-                            placeholder="Enter facilitator name"
-                        />
-
-                        <InputField
-                            id="expectedCollectors"
-                            label="Expected Collectors"
-                            type="number"
-                            min="1"
-                            value={expectedCollectors}
-                            onChange={(event) =>
-                                setExpectedCollectors(
-                                    event.target.value
-                                )
-                            }
-                            placeholder="e.g. 30"
-                            icon={<UsersIcon />}
-                        />
-                    </div>
-
-                    <div className="mt-5 rounded-xl border border-orange-100 bg-orange-50/60 px-4 py-3">
-                        <div className="flex items-start gap-3">
-                            <div className="mt-0.5 text-orange-500">
-                                <UsersIcon />
-                            </div>
-
-                            <div>
-                                <p className="text-sm font-semibold text-orange-800">
-                                    Training progress is automatic
-                                </p>
-
-                                <p className="mt-0.5 text-xs leading-5 text-orange-700">
-                                    The training status will be
-                                    calculated automatically
-                                    based on the number of
-                                    collectors recorded.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            {/* Evidence Photo */}
-            <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                <div className="p-6 md:p-8">
-                    <SectionHeader
-                        icon={<CameraIcon />}
-                        title="Training Evidence"
-                        description="Capture or upload a clear photo showing the training session and venue."
-                    />
-
-                    <label
-                        htmlFor="trainingPhoto"
-                        className={`group relative flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed p-8 text-center transition ${photo
-                            ? "border-green-200 bg-green-50/40"
-                            : "border-gray-200 bg-gray-50/50 hover:border-green-300 hover:bg-green-50/30"
-                            }`}
-                    >
-                        <input
-                            id="trainingPhoto"
-                            type="file"
-                            accept="image/*"
-                            capture="environment"
-                            onChange={handlePhotoChange}
-                            className="sr-only"
-                        />
-
-                        {!photo ? (
-                            <>
-                                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-100 text-green-600 transition group-hover:scale-105">
-                                    <UploadIcon />
+                                    <span className="ml-auto rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
+                                        Assigned
+                                    </span>
                                 </div>
 
-                                <p className="text-sm font-semibold text-gray-800">
-                                    Take or upload a photo
-                                </p>
-
-                                <p className="mt-1 max-w-sm text-xs leading-5 text-gray-500">
-                                    Use your device camera to
-                                    capture the training evidence
-                                    or select an existing image.
-                                </p>
-
-                                <span className="mt-4 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-gray-700 shadow-sm ring-1 ring-gray-200">
-                                    Choose Photo
-                                </span>
-
-                                <p className="mt-3 text-[11px] text-gray-400">
-                                    JPG, PNG or other image • Max
-                                    10MB
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Automatically
+                                    assigned
+                                    from your
+                                    account.
                                 </p>
                             </>
                         ) : (
-                            <div className="w-full">
-                                {photoPreview && (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img
-                                        src={photoPreview}
-                                        alt="Training evidence preview"
-                                        className="max-h-96 w-full rounded-xl object-cover shadow-sm"
-                                    />
-                                )}
-
-                                <div className="mt-4 flex items-center justify-between gap-4 rounded-xl bg-white p-3 text-left shadow-sm ring-1 ring-gray-100">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
-                                            <CheckIcon />
-                                        </div>
-
-                                        <div className="min-w-0">
-                                            <p className="truncate text-sm font-medium text-gray-800">
-                                                {photo.name}
-                                            </p>
-
-                                            <p className="text-xs text-gray-400">
-                                                {(
-                                                    photo.size /
-                                                    1024 /
-                                                    1024
-                                                ).toFixed(
-                                                    2
-                                                )}{" "}
-                                                MB
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <span className="shrink-0 text-xs font-semibold text-green-600">
-                                        Selected
-                                    </span>
-                                </div>
-                            </div>
+                            <InputField
+                                id="fieldOfficer"
+                                label=""
+                                value={
+                                    fieldOfficerId
+                                }
+                                onChange={(
+                                    event
+                                ) =>
+                                    setFieldOfficerId(
+                                        event
+                                            .target
+                                            .value
+                                    )
+                                }
+                                placeholder="Enter Field Officer ID"
+                            />
                         )}
-                    </label>
-                </div>
-            </section>
+                    </div>
 
-            {/* Location */}
-            <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-                <div className="p-6 md:p-8">
-                    <SectionHeader
-                        icon={<LocationIcon />}
-                        title="Training Location"
-                        description="Capture the GPS coordinates of the training venue."
+                    <InputField
+                        id="clusterName"
+                        label="Cluster Name"
+                        value={
+                            clusterName
+                        }
+                        onChange={(
+                            event
+                        ) =>
+                            setClusterName(
+                                event
+                                    .target
+                                    .value
+                            )
+                        }
+                        placeholder="e.g. Cluster 1"
                     />
 
-                    <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className={`flex h-11 w-11 items-center justify-center rounded-xl ${latitude &&
-                                        longitude
-                                        ? "bg-green-100 text-green-600"
-                                        : "bg-orange-100 text-orange-500"
-                                        }`}
+                    <InputField
+                        id="lga"
+                        label="LGA"
+                        value={lga}
+                        onChange={(
+                            event
+                        ) =>
+                            setLga(
+                                event
+                                    .target
+                                    .value
+                            )
+                        }
+                        placeholder="Enter LGA"
+                    />
+
+                    <InputField
+                        id="community"
+                        label="Community"
+                        value={
+                            community
+                        }
+                        onChange={(
+                            event
+                        ) =>
+                            setCommunity(
+                                event
+                                    .target
+                                    .value
+                            )
+                        }
+                        placeholder="Enter community name"
+                    />
+
+                    <InputField
+                        id="venue"
+                        label="Training Venue"
+                        value={venue}
+                        onChange={(
+                            event
+                        ) =>
+                            setVenue(
+                                event
+                                    .target
+                                    .value
+                            )
+                        }
+                        placeholder="Enter training venue"
+                    />
+
+                    <InputField
+                        id="facilitator"
+                        label="Training Facilitator"
+                        value={
+                            facilitator
+                        }
+                        onChange={(
+                            event
+                        ) =>
+                            setFacilitator(
+                                event
+                                    .target
+                                    .value
+                            )
+                        }
+                        placeholder="Enter facilitator name"
+                    />
+
+                    <InputField
+                        id="expectedCollectors"
+                        label="Expected Collectors"
+                        type="number"
+                        min="1"
+                        value={
+                            expectedCollectors
+                        }
+                        onChange={(
+                            event
+                        ) =>
+                            setExpectedCollectors(
+                                event
+                                    .target
+                                    .value
+                            )
+                        }
+                        placeholder="e.g. 30"
+                        icon={
+                            <UsersIcon />
+                        }
+                    />
+                </div>
+
+                <div className="mt-5 rounded-xl border border-orange-100 bg-orange-50/60 px-4 py-3">
+                    <div className="flex items-start gap-3">
+                        <div className="mt-0.5 text-orange-500">
+                            <UsersIcon />
+                        </div>
+
+                        <div>
+                            <p className="text-sm font-semibold text-orange-800">
+                                Training progress
+                                is automatic
+                            </p>
+
+                            <p className="mt-0.5 text-xs leading-5 text-orange-700">
+                                The training
+                                status will
+                                be calculated
+                                automatically
+                                based on the
+                                number of
+                                collectors
+                                recorded.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* ====================================================
+                EVIDENCE PHOTO
+            ==================================================== */}
+
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <div className="p-6 md:p-8">
+                <SectionHeader
+                    icon={
+                        <CameraIcon />
+                    }
+                    title="Training Evidence"
+                    description="Take a new photo with your camera or choose an existing image from your device."
+                />
+
+                {/* Hidden camera input */}
+                <input
+                    ref={
+                        cameraInputRef
+                    }
+                    id="trainingCamera"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={
+                        handlePhotoChange
+                    }
+                    className="hidden"
+                />
+
+                {/* Hidden gallery input */}
+                <input
+                    ref={
+                        galleryInputRef
+                    }
+                    id="trainingGallery"
+                    type="file"
+                    accept="image/*"
+                    onChange={
+                        handlePhotoChange
+                    }
+                    className="hidden"
+                />
+
+                {!photo ? (
+                    <div className="space-y-4">
+                        {/* Upload area */}
+                        <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-6 text-center">
+                            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-100 text-green-600">
+                                <CameraIcon />
+                            </div>
+
+                            <p className="text-sm font-semibold text-gray-800">
+                                Add training evidence
+                            </p>
+
+                            <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-gray-500">
+                                Take a new photo
+                                of the training
+                                session or
+                                select an
+                                existing image
+                                from your
+                                phone.
+                            </p>
+
+                            {/* Two options */}
+                            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        cameraInputRef.current?.click()
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 hover:shadow-md"
                                 >
-                                    {latitude &&
-                                        longitude ? (
-                                        <CheckIcon />
-                                    ) : (
-                                        <MapPinIcon />
-                                    )}
+                                    <CameraIcon />
+                                    Take Photo
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        galleryInputRef.current?.click()
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-green-300 hover:bg-green-50 hover:text-green-700"
+                                >
+                                    <ImageIcon />
+                                    Choose Photo
+                                </button>
+                            </div>
+
+                            <p className="mt-4 text-[11px] text-gray-400">
+                                JPG, PNG or
+                                other image •
+                                Maximum 10MB
+                            </p>
+                        </div>
+
+                        {/* Requirement notice */}
+                        <div className="flex items-start gap-3 rounded-xl border border-orange-100 bg-orange-50/60 px-4 py-3">
+                            <div className="mt-0.5 text-orange-500">
+                                <CameraIcon />
+                            </div>
+
+                            <div>
+                                <p className="text-xs font-semibold text-orange-800">
+                                    Training evidence
+                                    is required
+                                </p>
+
+                                <p className="mt-0.5 text-xs leading-5 text-orange-700">
+                                    Please ensure
+                                    the photo
+                                    clearly shows
+                                    the training
+                                    session and
+                                    venue.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-2xl border border-green-200 bg-green-50/40 p-4">
+                        {/* Preview */}
+                        {photoPreview && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                                src={
+                                    photoPreview
+                                }
+                                alt="Training evidence preview"
+                                className="max-h-96 w-full rounded-xl object-cover shadow-sm"
+                            />
+                        )}
+
+                        {/* File information */}
+                        <div className="mt-4 flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
+                                    <CheckIcon />
                                 </div>
 
-                                <div>
-                                    <p className="text-sm font-semibold text-gray-800">
-                                        {latitude &&
-                                            longitude
-                                            ? "Location captured"
-                                            : "Location not captured"}
+                                <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold text-gray-800">
+                                        {
+                                            photo.name
+                                        }
                                     </p>
 
-                                    <p className="mt-0.5 text-xs text-gray-500">
-                                        {latitude &&
-                                            longitude
-                                            ? "GPS coordinates are ready to submit."
-                                            : "Capture the current venue location."}
+                                    <p className="mt-0.5 text-xs text-gray-400">
+                                        {(
+                                            photo.size /
+                                            1024 /
+                                            1024
+                                        ).toFixed(
+                                            2
+                                        )}{" "}
+                                        MB
                                     </p>
                                 </div>
                             </div>
+
+                            <div className="flex items-center gap-2">
+                                <span className="rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
+                                    Selected
+                                </span>
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        removePhoto
+                                    }
+                                    className="rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Change photo options */}
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    cameraInputRef.current?.click()
+                                }
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-2.5 text-xs font-semibold text-green-700 transition hover:bg-green-50"
+                            >
+                                <CameraIcon />
+                                Retake Photo
+                            </button>
 
                             <button
                                 type="button"
-                                onClick={captureLocation}
-                                disabled={
-                                    locationLoading
+                                onClick={() =>
+                                    galleryInputRef.current?.click()
                                 }
-                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 transition hover:border-green-200 hover:bg-green-50 hover:text-green-700"
                             >
-                                {locationLoading ? (
-                                    <>
-                                        <Spinner />
-                                        Getting location...
-                                    </>
-                                ) : (
-                                    <>
-                                        <MapPinIcon />
-                                        {latitude &&
-                                            longitude
-                                            ? "Recapture Location"
-                                            : "Capture Location"}
-                                    </>
-                                )}
+                                <ImageIcon />
+                                Choose Another
                             </button>
                         </div>
+                    </div>
+                )}
+            </div>
+        </section>
 
-                        {(latitude || longitude) && (
+        {/* ====================================================
+                LOCATION
+            ==================================================== */}
+
+        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <div className="p-6 md:p-8">
+                <SectionHeader
+                    icon={
+                        <LocationIcon />
+                    }
+                    title="Training Location"
+                    description="Capture the GPS coordinates of the training venue."
+                />
+
+                <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-3">
+                            <div
+                                className={`flex h-11 w-11 items-center justify-center rounded-xl ${latitude &&
+                                    longitude
+                                    ? "bg-green-100 text-green-600"
+                                    : "bg-orange-100 text-orange-500"
+                                    }`}
+                            >
+                                {latitude &&
+                                    longitude ? (
+                                    <CheckIcon />
+                                ) : (
+                                    <MapPinIcon />
+                                )}
+                            </div>
+
+                            <div>
+                                <p className="text-sm font-semibold text-gray-800">
+                                    {latitude &&
+                                        longitude
+                                        ? "Location captured"
+                                        : "Location not captured"}
+                                </p>
+
+                                <p className="mt-0.5 text-xs text-gray-500">
+                                    {latitude &&
+                                        longitude
+                                        ? "GPS coordinates are ready to submit."
+                                        : "Capture the current venue location."}
+                                </p>
+                            </div>
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={
+                                captureLocation
+                            }
+                            disabled={
+                                locationLoading
+                            }
+                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {locationLoading ? (
+                                <>
+                                    <Spinner />
+                                    Getting location...
+                                </>
+                            ) : (
+                                <>
+                                    <MapPinIcon />
+
+                                    {latitude &&
+                                        longitude
+                                        ? "Recapture Location"
+                                        : "Capture Location"}
+                                </>
+                            )}
+                        </button>
+                    </div>
+
+                    {(latitude ||
+                        longitude) && (
                             <div className="mt-5 grid gap-4 border-t border-gray-200 pt-5 md:grid-cols-2">
                                 <div>
                                     <label
@@ -851,43 +1209,51 @@ export default function TrainingForm({
                                 </div>
                             </div>
                         )}
-                    </div>
-                </div>
-            </section>
-
-            {/* Submit */}
-            <div className="rounded-2xl border border-green-100 bg-linear-to-r from-green-50 to-orange-50 p-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p className="text-sm font-bold text-gray-900">
-                            Ready to save this training?
-                        </p>
-
-                        <p className="mt-1 text-xs text-gray-500">
-                            Make sure the photo and GPS location
-                            have been captured before submitting.
-                        </p>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={submitting}
-                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-7 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                    >
-                        {submitting ? (
-                            <>
-                                <Spinner />
-                                Saving Training...
-                            </>
-                        ) : (
-                            <>
-                                <SaveIcon />
-                                Save Training
-                            </>
-                        )}
-                    </button>
                 </div>
             </div>
-        </form>
-    );
+        </section>
+
+        {/* ====================================================
+                SUBMIT
+            ==================================================== */}
+
+        <div className="rounded-2xl border border-green-100 bg-linear-to-r from-green-50 to-orange-50 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p className="text-sm font-bold text-gray-900">
+                        Ready to save this
+                        training?
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                        Make sure the photo
+                        and GPS location
+                        have been captured
+                        before submitting.
+                    </p>
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={
+                        submitting
+                    }
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-7 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                >
+                    {submitting ? (
+                        <>
+                            <Spinner />
+                            Saving Training...
+                        </>
+                    ) : (
+                        <>
+                            <SaveIcon />
+                            Save Training
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
+    </form>
+);
 }
