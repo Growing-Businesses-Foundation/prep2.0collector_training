@@ -9,6 +9,8 @@ const ALLOWED_ACTIONS = [
     "USER_CREATED",
     "USER_UPDATED",
     "PASSWORD_RESET",
+    "PASSWORD_CHANGED",
+    "PASSWORD_CHANGE_FAILED",
     "ROLE_CHANGED",
     "USER_DELETED",
     "TRAINING_CREATED",
@@ -92,11 +94,15 @@ export async function GET(request: Request) {
             const createdAt: Record<string, Date> = {};
 
             if (dateFrom) {
-                createdAt.$gte = new Date(`${dateFrom}T00:00:00.000Z`);
+                createdAt.$gte = new Date(
+                    `${dateFrom} T00:00:00.000Z`
+                );
             }
 
             if (dateTo) {
-                createdAt.$lte = new Date(`${dateTo}T23:59:59.999Z`);
+                createdAt.$lte = new Date(
+                    `${dateTo} T23: 59: 59.999Z`
+                );
             }
 
             filter.createdAt = createdAt;
@@ -115,6 +121,12 @@ export async function GET(request: Request) {
 
             db.collection("audit_logs").countDocuments(filter),
         ]);
+
+        // Serialize MongoDB ObjectIds before returning JSON
+        const serializedLogs = logs.map((log) => ({
+            ...log,
+            _id: log._id?.toString(),
+        }));
 
         // Get distinct users for the filter dropdown
         const users = await db
@@ -181,7 +193,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json({
             success: true,
-            data: logs,
+            data: serializedLogs,
             pagination: {
                 page,
                 limit,

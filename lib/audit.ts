@@ -8,12 +8,15 @@ export type AuditAction =
     | "USER_CREATED"
     | "USER_UPDATED"
     | "PASSWORD_RESET"
+    | "PASSWORD_CHANGED"
+    | "PASSWORD_CHANGE_FAILED"
     | "ROLE_CHANGED"
     | "USER_DELETED"
     | "TRAINING_CREATED"
     | "TRAINING_UPDATED"
     | "COLLECTOR_CREATED"
     | "COLLECTOR_UPDATED";
+
 
 export interface AuditLog {
     _id?: ObjectId;
