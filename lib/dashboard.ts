@@ -142,11 +142,6 @@ export async function getDashboardData(
     const totalTrainingSessions =
         sessionsWithStatus.length;
 
-    const completedTrainingSessions =
-        sessionsWithStatus.filter(
-            (training) =>
-                training.trainingStatus === "Completed"
-        ).length;
 
     const totalExpectedCollectors =
         sessionsWithStatus.reduce(
@@ -237,7 +232,6 @@ export async function getDashboardData(
     return {
         stats: {
             totalTrainingSessions,
-            completedTrainingSessions,
             totalExpectedCollectors,
             totalCollectors,
             totalNewlyRecruitedCollectors,

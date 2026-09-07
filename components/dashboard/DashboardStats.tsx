@@ -3,7 +3,7 @@
 interface DashboardStatsProps {
     stats: {
         totalTrainingSessions: number;
-        completedTrainingSessions: number;
+        // completedTrainingSessions: number;
         totalExpectedCollectors: number;
         totalCollectors: number;
         totalNewlyRecruitedCollectors: number;
@@ -42,24 +42,24 @@ function TrainingIcon() {
     );
 }
 
-function CheckIcon() {
-    return (
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="h-5 w-5"
-        >
-            <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 12l4 4L19 6"
-            />
-        </svg>
-    );
-}
+// function CheckIcon() {
+//     return (
+//         <svg
+//             xmlns="http://www.w3.org/2000/svg"
+//             viewBox="0 0 24 24"
+//             fill="none"
+//             stroke="currentColor"
+//             strokeWidth="2"
+//             className="h-5 w-5"
+//         >
+//             <path
+//                 strokeLinecap="round"
+//                 strokeLinejoin="round"
+//                 d="M5 12l4 4L19 6"
+//             />
+//         </svg>
+//     );
+// }
 
 function UsersIcon() {
     return (
@@ -164,14 +164,14 @@ export default function DashboardStats({
             iconBg: "bg-green-50",
             iconColor: "text-green-600",
         },
-        {
-            title: "Completed Trainings",
-            value: stats.completedTrainingSessions,
-            description: "Sessions completed",
-            icon: <CheckIcon />,
-            iconBg: "bg-emerald-50",
-            iconColor: "text-emerald-600",
-        },
+        // {
+        //     title: "Completed Trainings",
+        //     value: stats.completedTrainingSessions,
+        //     description: "Sessions completed",
+        //     icon: <CheckIcon />,
+        //     iconBg: "bg-emerald-50",
+        //     iconColor: "text-emerald-600",
+        // },
         {
             title: "Expected Collectors",
             value: stats.totalExpectedCollectors,
