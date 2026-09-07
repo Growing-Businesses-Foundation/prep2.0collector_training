@@ -69,6 +69,99 @@ function LocationIcon() {
     );
 }
 
+async function compressImage(
+    file: File,
+    maxWidth = 1600,
+    maxHeight = 1600,
+    quality = 0.75
+): Promise<File> {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        const objectUrl = URL.createObjectURL(file);
+
+        image.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+
+            let width = image.width;
+            let height = image.height;
+
+            if (width > maxWidth || height > maxHeight) {
+                const widthRatio = maxWidth / width;
+                const heightRatio = maxHeight / height;
+                const ratio = Math.min(
+                    widthRatio,
+                    heightRatio
+                );
+
+                width = Math.round(width * ratio);
+                height = Math.round(height * ratio);
+            }
+
+            const canvas = document.createElement("canvas");
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const context = canvas.getContext("2d");
+
+            if (!context) {
+                reject(
+                    new Error(
+                        "Unable to process the selected image."
+                    )
+                );
+                return;
+            }
+
+            context.drawImage(
+                image,
+                0,
+                0,
+                width,
+                height
+            );
+
+            canvas.toBlob(
+                (blob) => {
+                    if (!blob) {
+                        reject(
+                            new Error(
+                                "Unable to compress the image."
+                            )
+                        );
+                        return;
+                    }
+
+                    const compressedFile = new File(
+                        [blob],
+                        `training-${Date.now()}.jpg`,
+                        {
+                            type: "image/jpeg",
+                            lastModified: Date.now(),
+                        }
+                    );
+
+                    resolve(compressedFile);
+                },
+                "image/jpeg",
+                quality
+            );
+        };
+
+        image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+
+            reject(
+                new Error(
+                    "Unable to read the selected image."
+                )
+            );
+        };
+
+        image.src = objectUrl;
+    });
+}
+
 function CameraIcon() {
     return (
         <svg
@@ -372,50 +465,74 @@ export default function TrainingForm({
     // PHOTO HANDLING
     // ============================================================
 
-    function handlePhotoChange(
+
+    async function handlePhotoChange(
         event: React.ChangeEvent<HTMLInputElement>
     ) {
-        const file =
-            event.target.files?.[0];
+        const file = event.target.files?.[0];
 
         if (!file) {
             return;
         }
 
         if (!file.type.startsWith("image/")) {
-            alert(
-                "Please select an image file."
-            );
-
+            alert("Please select an image file.");
             event.target.value = "";
             return;
         }
 
-        if (
-            file.size >
-            10 * 1024 * 1024
-        ) {
+        try {
+            const compressedFile = await compressImage(file);
+
+            console.log(
+                "Original photo size:",
+                (file.size / 1024 / 1024).toFixed(2),
+                "MB"
+            );
+
+            console.log(
+                "Compressed photo size:",
+                (compressedFile.size / 1024 / 1024).toFixed(2),
+                "MB"
+            );
+
+            /*
+             * Keep the final uploaded image safely below
+             * Vercel's 4.5 MB request payload limit.
+             */
+            if (compressedFile.size > 3 * 1024 * 1024) {
+                alert(
+                    "The photo is still too large after compression. Please choose another photo."
+                );
+
+                event.target.value = "";
+                return;
+            }
+
+            if (photoPreview) {
+                URL.revokeObjectURL(photoPreview);
+            }
+
+            const previewUrl =
+                URL.createObjectURL(compressedFile);
+
+            setPhoto(compressedFile);
+            setPhotoPreview(previewUrl);
+
+        } catch (error) {
+            console.error(
+                "Photo processing error:",
+                error
+            );
+
             alert(
-                "Photo must be less than 10MB."
+                "Unable to process this photo. Please try another image."
             );
 
             event.target.value = "";
-            return;
         }
-
-        // Release previous preview URL.
-        if (photoPreview) {
-            URL.revokeObjectURL(
-                photoPreview
-            );
-        }
-
-        const previewUrl =
-            URL.createObjectURL(file);
-
-        setPhoto(file);
-        setPhotoPreview(previewUrl);
     }
+
 
     function removePhoto() {
         if (photoPreview) {
@@ -617,348 +734,461 @@ export default function TrainingForm({
          * completed the operation or the request failed before
          * reaching the server.
          */
-    //     alert(
-    //         "The connection was interrupted while saving the training session. Please check your Training page before submitting again."
-    //     );
-    // } finally {
-    //     setSubmitting(false);
-    // }
-}
+        //     alert(
+        //         "The connection was interrupted while saving the training session. Please check your Training page before submitting again."
+        //     );
+        // } finally {
+        //     setSubmitting(false);
+        // }
+    }
 
 
-return (
-    <form
-        onSubmit={handleSubmit}
-        className="space-y-6"
-    >
-        {/* ====================================================
+    return (
+        <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
+        >
+            {/* ====================================================
                 MAIN INFORMATION
             ==================================================== */}
 
-        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="h-1 bg-linear-to-r from-green-600 via-green-500 to-orange-400" />
+            <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                <div className="h-1 bg-linear-to-r from-green-600 via-green-500 to-orange-400" />
 
-            <div className="p-6 md:p-8">
-                <SectionHeader
-                    icon={
-                        <CalendarIcon />
-                    }
-                    title="Training Information"
-                    description="Enter the details for this collector training session."
-                />
-
-                <div className="grid gap-5 md:grid-cols-2">
-                    <InputField
-                        id="trainingDate"
-                        label="Training Date"
-                        type="date"
-                        value={
-                            trainingDate
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setTrainingDate(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
+                <div className="p-6 md:p-8">
+                    <SectionHeader
                         icon={
                             <CalendarIcon />
                         }
+                        title="Training Information"
+                        description="Enter the details for this collector training session."
                     />
 
-                    {/* Field Officer */}
-                    <div>
-                        <label
-                            htmlFor="fieldOfficer"
-                            className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700"
-                        >
-                            <span className="text-gray-400">
-                                <UserIcon />
-                            </span>
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <InputField
+                            id="trainingDate"
+                            label="Training Date"
+                            type="date"
+                            value={
+                                trainingDate
+                            }
+                            onChange={(
+                                event
+                            ) =>
+                                setTrainingDate(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            }
+                            icon={
+                                <CalendarIcon />
+                            }
+                        />
 
-                            Field Officer
+                        {/* Field Officer */}
+                        <div>
+                            <label
+                                htmlFor="fieldOfficer"
+                                className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-700"
+                            >
+                                <span className="text-gray-400">
+                                    <UserIcon />
+                                </span>
 
-                            <span className="text-orange-500">
-                                *
-                            </span>
-                        </label>
+                                Field Officer
 
-                        {role ===
-                            "WRITE" ? (
-                            <>
-                                <div className="flex items-center gap-3 rounded-xl border border-green-100 bg-green-50/60 px-4 py-3">
-                                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 text-green-600">
-                                        <UserIcon />
+                                <span className="text-orange-500">
+                                    *
+                                </span>
+                            </label>
+
+                            {role ===
+                                "WRITE" ? (
+                                <>
+                                    <div className="flex items-center gap-3 rounded-xl border border-green-100 bg-green-50/60 px-4 py-3">
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-100 text-green-600">
+                                            <UserIcon />
+                                        </div>
+
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-semibold text-gray-800">
+                                                {foName ||
+                                                    foId ||
+                                                    "Assigned Field Officer"}
+                                            </p>
+
+                                            {foName &&
+                                                foId && (
+                                                    <p className="mt-0.5 text-xs text-gray-500">
+                                                        ID:{" "}
+                                                        {
+                                                            foId
+                                                        }
+                                                    </p>
+                                                )}
+                                        </div>
+
+                                        <span className="ml-auto rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
+                                            Assigned
+                                        </span>
+                                    </div>
+
+                                    <p className="mt-2 text-xs text-gray-500">
+                                        Automatically
+                                        assigned
+                                        from your
+                                        account.
+                                    </p>
+                                </>
+                            ) : (
+                                <InputField
+                                    id="fieldOfficer"
+                                    label=""
+                                    value={
+                                        fieldOfficerId
+                                    }
+                                    onChange={(
+                                        event
+                                    ) =>
+                                        setFieldOfficerId(
+                                            event
+                                                .target
+                                                .value
+                                        )
+                                    }
+                                    placeholder="Enter Field Officer ID"
+                                />
+                            )}
+                        </div>
+
+                        <InputField
+                            id="clusterName"
+                            label="Cluster Name"
+                            value={
+                                clusterName
+                            }
+                            onChange={(
+                                event
+                            ) =>
+                                setClusterName(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            }
+                            placeholder="e.g. Cluster 1"
+                        />
+
+                        <InputField
+                            id="lga"
+                            label="LGA"
+                            value={lga}
+                            onChange={(
+                                event
+                            ) =>
+                                setLga(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            }
+                            placeholder="Enter LGA"
+                        />
+
+                        <InputField
+                            id="community"
+                            label="Community"
+                            value={
+                                community
+                            }
+                            onChange={(
+                                event
+                            ) =>
+                                setCommunity(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            }
+                            placeholder="Enter community name"
+                        />
+
+                        <InputField
+                            id="venue"
+                            label="Training Venue"
+                            value={venue}
+                            onChange={(
+                                event
+                            ) =>
+                                setVenue(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            }
+                            placeholder="Enter training venue"
+                        />
+
+                        <InputField
+                            id="facilitator"
+                            label="Training Facilitator"
+                            value={
+                                facilitator
+                            }
+                            onChange={(
+                                event
+                            ) =>
+                                setFacilitator(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            }
+                            placeholder="Enter facilitator name"
+                        />
+
+                        <InputField
+                            id="expectedCollectors"
+                            label="Expected Collectors"
+                            type="number"
+                            min="1"
+                            value={
+                                expectedCollectors
+                            }
+                            onChange={(
+                                event
+                            ) =>
+                                setExpectedCollectors(
+                                    event
+                                        .target
+                                        .value
+                                )
+                            }
+                            placeholder="e.g. 30"
+                            icon={
+                                <UsersIcon />
+                            }
+                        />
+                    </div>
+
+                    <div className="mt-5 rounded-xl border border-orange-100 bg-orange-50/60 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                            <div className="mt-0.5 text-orange-500">
+                                <UsersIcon />
+                            </div>
+
+                            <div>
+                                <p className="text-sm font-semibold text-orange-800">
+                                    Training progress
+                                    is automatic
+                                </p>
+
+                                <p className="mt-0.5 text-xs leading-5 text-orange-700">
+                                    The training
+                                    status will
+                                    be calculated
+                                    automatically
+                                    based on the
+                                    number of
+                                    collectors
+                                    recorded.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ====================================================
+                EVIDENCE PHOTO
+            ==================================================== */}
+
+            <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                <div className="p-6 md:p-8">
+                    <SectionHeader
+                        icon={
+                            <CameraIcon />
+                        }
+                        title="Training Evidence"
+                        description="Take a new photo with your camera or choose an existing image from your device."
+                    />
+
+                    {/* Hidden camera input */}
+                    <input
+                        ref={
+                            cameraInputRef
+                        }
+                        id="trainingCamera"
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        onChange={
+                            handlePhotoChange
+                        }
+                        className="hidden"
+                    />
+
+                    {/* Hidden gallery input */}
+                    <input
+                        ref={
+                            galleryInputRef
+                        }
+                        id="trainingGallery"
+                        type="file"
+                        accept="image/*"
+                        onChange={
+                            handlePhotoChange
+                        }
+                        className="hidden"
+                    />
+
+                    {!photo ? (
+                        <div className="space-y-4">
+                            {/* Upload area */}
+                            <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-6 text-center">
+                                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-100 text-green-600">
+                                    <CameraIcon />
+                                </div>
+
+                                <p className="text-sm font-semibold text-gray-800">
+                                    Add training evidence
+                                </p>
+
+                                <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-gray-500">
+                                    Take a new photo
+                                    of the training
+                                    session or
+                                    select an
+                                    existing image
+                                    from your
+                                    phone.
+                                </p>
+
+                                {/* Two options */}
+                                <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            cameraInputRef.current?.click()
+                                        }
+                                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 hover:shadow-md"
+                                    >
+                                        <CameraIcon />
+                                        Take Photo
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            galleryInputRef.current?.click()
+                                        }
+                                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-green-300 hover:bg-green-50 hover:text-green-700"
+                                    >
+                                        <ImageIcon />
+                                        Choose Photo
+                                    </button>
+                                </div>
+
+                                <p className="mt-4 text-[11px] text-gray-400">
+                                    JPG, PNG or
+                                    other image •
+                                    Maximum 3MB after compression
+                                </p>
+                            </div>
+
+                            {/* Requirement notice */}
+                            <div className="flex items-start gap-3 rounded-xl border border-orange-100 bg-orange-50/60 px-4 py-3">
+                                <div className="mt-0.5 text-orange-500">
+                                    <CameraIcon />
+                                </div>
+
+                                <div>
+                                    <p className="text-xs font-semibold text-orange-800">
+                                        Training evidence
+                                        is required
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs leading-5 text-orange-700">
+                                        Please ensure
+                                        the photo
+                                        clearly shows
+                                        the training
+                                        session and
+                                        venue.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="rounded-2xl border border-green-200 bg-green-50/40 p-4">
+                            {/* Preview */}
+                            {photoPreview && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={
+                                        photoPreview
+                                    }
+                                    alt="Training evidence preview"
+                                    className="max-h-96 w-full rounded-xl object-cover shadow-sm"
+                                />
+                            )}
+
+                            {/* File information */}
+                            <div className="mt-4 flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
+                                        <CheckIcon />
                                     </div>
 
                                     <div className="min-w-0">
                                         <p className="truncate text-sm font-semibold text-gray-800">
-                                            {foName ||
-                                                foId ||
-                                                "Assigned Field Officer"}
+                                            {
+                                                photo.name
+                                            }
                                         </p>
 
-                                        {foName &&
-                                            foId && (
-                                                <p className="mt-0.5 text-xs text-gray-500">
-                                                    ID:{" "}
-                                                    {
-                                                        foId
-                                                    }
-                                                </p>
-                                            )}
+                                        <p className="mt-0.5 text-xs text-gray-400">
+                                            {(
+                                                photo.size /
+                                                1024 /
+                                                1024
+                                            ).toFixed(
+                                                2
+                                            )}{" "}
+                                            MB
+                                        </p>
                                     </div>
-
-                                    <span className="ml-auto rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
-                                        Assigned
-                                    </span>
                                 </div>
 
-                                <p className="mt-2 text-xs text-gray-500">
-                                    Automatically
-                                    assigned
-                                    from your
-                                    account.
-                                </p>
-                            </>
-                        ) : (
-                            <InputField
-                                id="fieldOfficer"
-                                label=""
-                                value={
-                                    fieldOfficerId
-                                }
-                                onChange={(
-                                    event
-                                ) =>
-                                    setFieldOfficerId(
-                                        event
-                                            .target
-                                            .value
-                                    )
-                                }
-                                placeholder="Enter Field Officer ID"
-                            />
-                        )}
-                    </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
+                                        Selected
+                                    </span>
 
-                    <InputField
-                        id="clusterName"
-                        label="Cluster Name"
-                        value={
-                            clusterName
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setClusterName(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                        placeholder="e.g. Cluster 1"
-                    />
-
-                    <InputField
-                        id="lga"
-                        label="LGA"
-                        value={lga}
-                        onChange={(
-                            event
-                        ) =>
-                            setLga(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                        placeholder="Enter LGA"
-                    />
-
-                    <InputField
-                        id="community"
-                        label="Community"
-                        value={
-                            community
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setCommunity(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                        placeholder="Enter community name"
-                    />
-
-                    <InputField
-                        id="venue"
-                        label="Training Venue"
-                        value={venue}
-                        onChange={(
-                            event
-                        ) =>
-                            setVenue(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                        placeholder="Enter training venue"
-                    />
-
-                    <InputField
-                        id="facilitator"
-                        label="Training Facilitator"
-                        value={
-                            facilitator
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setFacilitator(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                        placeholder="Enter facilitator name"
-                    />
-
-                    <InputField
-                        id="expectedCollectors"
-                        label="Expected Collectors"
-                        type="number"
-                        min="1"
-                        value={
-                            expectedCollectors
-                        }
-                        onChange={(
-                            event
-                        ) =>
-                            setExpectedCollectors(
-                                event
-                                    .target
-                                    .value
-                            )
-                        }
-                        placeholder="e.g. 30"
-                        icon={
-                            <UsersIcon />
-                        }
-                    />
-                </div>
-
-                <div className="mt-5 rounded-xl border border-orange-100 bg-orange-50/60 px-4 py-3">
-                    <div className="flex items-start gap-3">
-                        <div className="mt-0.5 text-orange-500">
-                            <UsersIcon />
-                        </div>
-
-                        <div>
-                            <p className="text-sm font-semibold text-orange-800">
-                                Training progress
-                                is automatic
-                            </p>
-
-                            <p className="mt-0.5 text-xs leading-5 text-orange-700">
-                                The training
-                                status will
-                                be calculated
-                                automatically
-                                based on the
-                                number of
-                                collectors
-                                recorded.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        {/* ====================================================
-                EVIDENCE PHOTO
-            ==================================================== */}
-
-        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="p-6 md:p-8">
-                <SectionHeader
-                    icon={
-                        <CameraIcon />
-                    }
-                    title="Training Evidence"
-                    description="Take a new photo with your camera or choose an existing image from your device."
-                />
-
-                {/* Hidden camera input */}
-                <input
-                    ref={
-                        cameraInputRef
-                    }
-                    id="trainingCamera"
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    onChange={
-                        handlePhotoChange
-                    }
-                    className="hidden"
-                />
-
-                {/* Hidden gallery input */}
-                <input
-                    ref={
-                        galleryInputRef
-                    }
-                    id="trainingGallery"
-                    type="file"
-                    accept="image/*"
-                    onChange={
-                        handlePhotoChange
-                    }
-                    className="hidden"
-                />
-
-                {!photo ? (
-                    <div className="space-y-4">
-                        {/* Upload area */}
-                        <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-6 text-center">
-                            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-green-100 text-green-600">
-                                <CameraIcon />
+                                    <button
+                                        type="button"
+                                        onClick={
+                                            removePhoto
+                                        }
+                                        className="rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
                             </div>
 
-                            <p className="text-sm font-semibold text-gray-800">
-                                Add training evidence
-                            </p>
-
-                            <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-gray-500">
-                                Take a new photo
-                                of the training
-                                session or
-                                select an
-                                existing image
-                                from your
-                                phone.
-                            </p>
-
-                            {/* Two options */}
-                            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                            {/* Change photo options */}
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                 <button
                                     type="button"
                                     onClick={() =>
                                         cameraInputRef.current?.click()
                                     }
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 hover:shadow-md"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-2.5 text-xs font-semibold text-green-700 transition hover:bg-green-50"
                                 >
                                     <CameraIcon />
-                                    Take Photo
+                                    Retake Photo
                                 </button>
 
                                 <button
@@ -966,294 +1196,181 @@ return (
                                     onClick={() =>
                                         galleryInputRef.current?.click()
                                     }
-                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-semibold text-gray-700 shadow-sm transition hover:border-green-300 hover:bg-green-50 hover:text-green-700"
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 transition hover:border-green-200 hover:bg-green-50 hover:text-green-700"
                                 >
                                     <ImageIcon />
-                                    Choose Photo
-                                </button>
-                            </div>
-
-                            <p className="mt-4 text-[11px] text-gray-400">
-                                JPG, PNG or
-                                other image •
-                                Maximum 10MB
-                            </p>
-                        </div>
-
-                        {/* Requirement notice */}
-                        <div className="flex items-start gap-3 rounded-xl border border-orange-100 bg-orange-50/60 px-4 py-3">
-                            <div className="mt-0.5 text-orange-500">
-                                <CameraIcon />
-                            </div>
-
-                            <div>
-                                <p className="text-xs font-semibold text-orange-800">
-                                    Training evidence
-                                    is required
-                                </p>
-
-                                <p className="mt-0.5 text-xs leading-5 text-orange-700">
-                                    Please ensure
-                                    the photo
-                                    clearly shows
-                                    the training
-                                    session and
-                                    venue.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="rounded-2xl border border-green-200 bg-green-50/40 p-4">
-                        {/* Preview */}
-                        {photoPreview && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                                src={
-                                    photoPreview
-                                }
-                                alt="Training evidence preview"
-                                className="max-h-96 w-full rounded-xl object-cover shadow-sm"
-                            />
-                        )}
-
-                        {/* File information */}
-                        <div className="mt-4 flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="flex min-w-0 items-center gap-3">
-                                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
-                                    <CheckIcon />
-                                </div>
-
-                                <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold text-gray-800">
-                                        {
-                                            photo.name
-                                        }
-                                    </p>
-
-                                    <p className="mt-0.5 text-xs text-gray-400">
-                                        {(
-                                            photo.size /
-                                            1024 /
-                                            1024
-                                        ).toFixed(
-                                            2
-                                        )}{" "}
-                                        MB
-                                    </p>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                                <span className="rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
-                                    Selected
-                                </span>
-
-                                <button
-                                    type="button"
-                                    onClick={
-                                        removePhoto
-                                    }
-                                    className="rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                                >
-                                    Remove
+                                    Choose Another
                                 </button>
                             </div>
                         </div>
+                    )}
+                </div>
+            </section>
 
-                        {/* Change photo options */}
-                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    cameraInputRef.current?.click()
-                                }
-                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-2.5 text-xs font-semibold text-green-700 transition hover:bg-green-50"
-                            >
-                                <CameraIcon />
-                                Retake Photo
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    galleryInputRef.current?.click()
-                                }
-                                className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 transition hover:border-green-200 hover:bg-green-50 hover:text-green-700"
-                            >
-                                <ImageIcon />
-                                Choose Another
-                            </button>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </section>
-
-        {/* ====================================================
+            {/* ====================================================
                 LOCATION
             ==================================================== */}
 
-        <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="p-6 md:p-8">
-                <SectionHeader
-                    icon={
-                        <LocationIcon />
-                    }
-                    title="Training Location"
-                    description="Capture the GPS coordinates of the training venue."
-                />
+            <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                <div className="p-6 md:p-8">
+                    <SectionHeader
+                        icon={
+                            <LocationIcon />
+                        }
+                        title="Training Location"
+                        description="Capture the GPS coordinates of the training venue."
+                    />
 
-                <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex items-center gap-3">
-                            <div
-                                className={`flex h-11 w-11 items-center justify-center rounded-xl ${latitude &&
-                                    longitude
-                                    ? "bg-green-100 text-green-600"
-                                    : "bg-orange-100 text-orange-500"
-                                    }`}
+                    <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-3">
+                                <div
+                                    className={`flex h-11 w-11 items-center justify-center rounded-xl ${latitude &&
+                                        longitude
+                                        ? "bg-green-100 text-green-600"
+                                        : "bg-orange-100 text-orange-500"
+                                        }`}
+                                >
+                                    {latitude &&
+                                        longitude ? (
+                                        <CheckIcon />
+                                    ) : (
+                                        <MapPinIcon />
+                                    )}
+                                </div>
+
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-800">
+                                        {latitude &&
+                                            longitude
+                                            ? "Location captured"
+                                            : "Location not captured"}
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs text-gray-500">
+                                        {latitude &&
+                                            longitude
+                                            ? "GPS coordinates are ready to submit."
+                                            : "Capture the current venue location."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={
+                                    captureLocation
+                                }
+                                disabled={
+                                    locationLoading
+                                }
+                                className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                {latitude &&
-                                    longitude ? (
-                                    <CheckIcon />
+                                {locationLoading ? (
+                                    <>
+                                        <Spinner />
+                                        Getting location...
+                                    </>
                                 ) : (
-                                    <MapPinIcon />
+                                    <>
+                                        <MapPinIcon />
+
+                                        {latitude &&
+                                            longitude
+                                            ? "Recapture Location"
+                                            : "Capture Location"}
+                                    </>
                                 )}
-                            </div>
-
-                            <div>
-                                <p className="text-sm font-semibold text-gray-800">
-                                    {latitude &&
-                                        longitude
-                                        ? "Location captured"
-                                        : "Location not captured"}
-                                </p>
-
-                                <p className="mt-0.5 text-xs text-gray-500">
-                                    {latitude &&
-                                        longitude
-                                        ? "GPS coordinates are ready to submit."
-                                        : "Capture the current venue location."}
-                                </p>
-                            </div>
+                            </button>
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={
-                                captureLocation
-                            }
-                            disabled={
-                                locationLoading
-                            }
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-                        >
-                            {locationLoading ? (
-                                <>
-                                    <Spinner />
-                                    Getting location...
-                                </>
-                            ) : (
-                                <>
-                                    <MapPinIcon />
+                        {(latitude ||
+                            longitude) && (
+                                <div className="mt-5 grid gap-4 border-t border-gray-200 pt-5 md:grid-cols-2">
+                                    <div>
+                                        <label
+                                            htmlFor="latitude"
+                                            className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                                        >
+                                            Latitude
+                                        </label>
 
-                                    {latitude &&
-                                        longitude
-                                        ? "Recapture Location"
-                                        : "Capture Location"}
-                                </>
+                                        <input
+                                            id="latitude"
+                                            type="text"
+                                            value={
+                                                latitude
+                                            }
+                                            readOnly
+                                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-sm text-gray-700"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label
+                                            htmlFor="longitude"
+                                            className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                                        >
+                                            Longitude
+                                        </label>
+
+                                        <input
+                                            id="longitude"
+                                            type="text"
+                                            value={
+                                                longitude
+                                            }
+                                            readOnly
+                                            className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-sm text-gray-700"
+                                        />
+                                    </div>
+                                </div>
                             )}
-                        </button>
                     </div>
-
-                    {(latitude ||
-                        longitude) && (
-                            <div className="mt-5 grid gap-4 border-t border-gray-200 pt-5 md:grid-cols-2">
-                                <div>
-                                    <label
-                                        htmlFor="latitude"
-                                        className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                                    >
-                                        Latitude
-                                    </label>
-
-                                    <input
-                                        id="latitude"
-                                        type="text"
-                                        value={
-                                            latitude
-                                        }
-                                        readOnly
-                                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-sm text-gray-700"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label
-                                        htmlFor="longitude"
-                                        className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                                    >
-                                        Longitude
-                                    </label>
-
-                                    <input
-                                        id="longitude"
-                                        type="text"
-                                        value={
-                                            longitude
-                                        }
-                                        readOnly
-                                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 font-mono text-sm text-gray-700"
-                                    />
-                                </div>
-                            </div>
-                        )}
                 </div>
-            </div>
-        </section>
+            </section>
 
-        {/* ====================================================
+            {/* ====================================================
                 SUBMIT
             ==================================================== */}
 
-        <div className="rounded-2xl border border-green-100 bg-linear-to-r from-green-50 to-orange-50 p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p className="text-sm font-bold text-gray-900">
-                        Ready to save this
-                        training?
-                    </p>
+            <div className="rounded-2xl border border-green-100 bg-linear-to-r from-green-50 to-orange-50 p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <p className="text-sm font-bold text-gray-900">
+                            Ready to save this
+                            training?
+                        </p>
 
-                    <p className="mt-1 text-xs text-gray-500">
-                        Make sure the photo
-                        and GPS location
-                        have been captured
-                        before submitting.
-                    </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Make sure the photo
+                            and GPS location
+                            have been captured
+                            before submitting.
+                        </p>
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={
+                            submitting
+                        }
+                        className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-7 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                    >
+                        {submitting ? (
+                            <>
+                                <Spinner />
+                                Saving Training...
+                            </>
+                        ) : (
+                            <>
+                                <SaveIcon />
+                                Save Training
+                            </>
+                        )}
+                    </button>
                 </div>
-
-                <button
-                    type="submit"
-                    disabled={
-                        submitting
-                    }
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-7 py-3.5 text-sm font-bold text-white shadow-sm transition hover:bg-green-700 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                >
-                    {submitting ? (
-                        <>
-                            <Spinner />
-                            Saving Training...
-                        </>
-                    ) : (
-                        <>
-                            <SaveIcon />
-                            Save Training
-                        </>
-                    )}
-                </button>
             </div>
-        </div>
-    </form>
-);
+        </form>
+    );
 }

@@ -262,16 +262,17 @@ export async function POST(request: Request) {
             );
         }
 
-        if (photo.size > 10 * 1024 * 1024) {
+
+        if (photo.size > 3 * 1024 * 1024) {
             return NextResponse.json(
                 {
                     success: false,
-                    message:
-                        "Training photo must be less than 10MB.",
+                    message: "Training photo must be less than 3MB.",
                 },
                 { status: 400 }
             );
         }
+
 
         // ====================================================
         // DATABASE
