@@ -508,7 +508,7 @@ export default function TrainingForm({
             formData.append("photo", photo);
 
             const response = await fetch(
-                `${window.location.origin}/api/training-sessions`,
+                `/api/training-sessions`,
                 {
                     method: "POST",
                     body: formData,
