@@ -5,7 +5,7 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 const uri = process.env.MONGODB_URI;
 
 if (!uri) {
-    throw new Error("Please define MONGODB_URI in .env.local");
+    throw new Error("Please define MONGODB_URI in your environment variables.");
 }
 
 const options = {
@@ -14,25 +14,22 @@ const options = {
         strict: true,
         deprecationErrors: true,
     },
-};
 
-let client: MongoClient;
-let clientPromise: Promise<MongoClient>;
+    maxPoolSize: 20,
+    maxIdleTimeMS: 60_000,
+    waitQueueTimeoutMS: 10_000,
+};
 
 declare global {
     var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-if (process.env.NODE_ENV === "development") {
-    if (!global._mongoClientPromise) {
-        client = new MongoClient(uri, options);
-        global._mongoClientPromise = client.connect();
-    }
+if (!global._mongoClientPromise) {
+    const client = new MongoClient(uri, options);
 
-    clientPromise = global._mongoClientPromise;
-} else {
-    client = new MongoClient(uri, options);
-    clientPromise = client.connect();
+    global._mongoClientPromise = client.connect();
 }
+
+const clientPromise = global._mongoClientPromise;
 
 export default clientPromise;
