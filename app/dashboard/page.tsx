@@ -22,7 +22,7 @@ export default async function DashboardPage() {
 
     return (
         <AppShell role={session.user.role}>
-            <div className="px-4 py-6 sm:px-6 sm:py-8">
+            <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto max-w-7xl">
 
                     {/* Header */}
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
                     <DashboardActions
                         canWrite={session.user.role !== "READ_ONLY"}
                     />
-                    
+
                     {/* Recent Trainings */}
                     <RecentTrainings
                         trainings={dashboardData.recentTrainings}

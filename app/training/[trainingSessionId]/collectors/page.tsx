@@ -90,7 +90,7 @@ export default async function TrainingSessionCollectorsPage({
 
     return (
         <AppShell role={session.user.role}>
-            <div className="px-4 py-6 sm:px-6 sm:py-8">
+            <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto max-w-7xl">
                     {/* Back */}
                     <div className="mb-6">
@@ -368,7 +368,7 @@ export default async function TrainingSessionCollectorsPage({
                             </div>
                         ) : (
                             <>
-                                <div className="hidden overflow-x-auto md:block">
+                                <div className="hidden max-h-[calc(100vh-420px)] overflow-y-auto overflow-x-auto overscroll-contain md:block">
                                     <table className="w-full text-left">
                                         <thead className="border-b border-gray-200 bg-gray-50">
                                             <tr>
@@ -443,7 +443,7 @@ export default async function TrainingSessionCollectorsPage({
                                     </table>
                                 </div>
 
-                                <div className="divide-y divide-gray-100 md:hidden">
+                                <div className="max-h-[calc(100vh-380px)] divide-y divide-gray-100 overflow-y-auto overscroll-contain md:hidden">
                                     {collectors.map(
                                         (collector, index) => (
                                             <div

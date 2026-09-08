@@ -381,8 +381,8 @@ export default async function CollectorsPage({
         <AppShell
             role={session.user.role}
         >
-            <div className="px-4 py-6 sm:px-6 sm:py-8">
-                <div className="mx-auto max-w-7xl">
+            <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8">
+                <div className="mx-auto w-full max-w-7xl">
 
                     {/* Header */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -504,7 +504,7 @@ export default async function CollectorsPage({
                         ) : (
                             <>
                                 {/* Desktop */}
-                                <div className="hidden overflow-x-auto md:block">
+                                <div className="hidden max-h-[calc(100vh-420px)] overflow-y-auto overflow-x-auto overscroll-contain md:block">
                                     <table className="w-full text-left">
                                         <thead className="border-b border-gray-200 bg-gray-50">
                                             <tr>
@@ -587,9 +587,9 @@ export default async function CollectorsPage({
                                                         <td className="px-5 py-4">
                                                             <span
                                                                 className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                                        "Yes"
-                                                                        ? "bg-green-50 text-green-700"
-                                                                        : "bg-gray-100 text-gray-600"
+                                                                    "Yes"
+                                                                    ? "bg-green-50 text-green-700"
+                                                                    : "bg-gray-100 text-gray-600"
                                                                     }`}
                                                             >
                                                                 {
@@ -631,7 +631,7 @@ export default async function CollectorsPage({
                                 </div>
 
                                 {/* Mobile */}
-                                <div className="divide-y divide-gray-100 md:hidden">
+                                <div className="max-h-[calc(100vh-380px)] divide-y divide-gray-100 overflow-y-auto overscroll-contain md:hidden">
                                     {collectorRecords.map(
                                         (
                                             collector
@@ -659,9 +659,9 @@ export default async function CollectorsPage({
 
                                                     <span
                                                         className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                                "Yes"
-                                                                ? "bg-green-50 text-green-700"
-                                                                : "bg-gray-100 text-gray-600"
+                                                            "Yes"
+                                                            ? "bg-green-50 text-green-700"
+                                                            : "bg-gray-100 text-gray-600"
                                                             }`}
                                                     >
                                                         {

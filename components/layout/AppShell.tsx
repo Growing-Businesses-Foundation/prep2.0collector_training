@@ -15,17 +15,17 @@ export default function AppShell({
     const [mobileOpen, setMobileOpen] = useState(false);
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <div className="flex min-h-screen">
+        <div className="h-screen overflow-hidden bg-gray-100">
+            <div className="flex h-screen">
                 <Sidebar
                     role={role}
                     mobileOpen={mobileOpen}
                     onClose={() => setMobileOpen(false)}
                 />
 
-                <div className="min-w-0 flex-1">
+                <div className="flex min-w-0 flex-1 flex-col">
                     {/* Mobile header */}
-                    <header className="sticky top-0 z-30 flex h-16 items-center border-b border-gray-200 bg-white px-4 lg:hidden">
+                    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center border-b border-gray-200 bg-white px-4 lg:hidden">
                         <button
                             type="button"
                             onClick={() => setMobileOpen(true)}
@@ -46,7 +46,8 @@ export default function AppShell({
                         </div>
                     </header>
 
-                    <main className="min-w-0">
+                    {/* Main scroll area */}
+                    <main className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
                         {children}
                     </main>
                 </div>

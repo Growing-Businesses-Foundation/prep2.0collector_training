@@ -345,8 +345,8 @@ export default async function TrainingSessionsPage({
         <AppShell
             role={session.user.role}
         >
-            <div className="px-4 py-6 sm:px-6 sm:py-8">
-                <div className="mx-auto max-w-7xl">
+            <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8">
+                <div className="mx-auto w-full max-w-7xl">
 
                     {/* Header */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -456,7 +456,7 @@ export default async function TrainingSessionsPage({
                         ) : (
                             <>
                                 {/* Desktop */}
-                                <div className="hidden overflow-x-auto md:block">
+                                <div className="hidden max-h-[calc(100vh-420px)] overflow-y-auto overflow-x-auto overscroll-contain md:block">
                                     <table className="w-full text-left">
                                         <thead className="border-b border-gray-200 bg-gray-50">
                                             <tr>
@@ -605,7 +605,7 @@ export default async function TrainingSessionsPage({
                                 </div>
 
                                 {/* Mobile */}
-                                <div className="divide-y divide-gray-100 md:hidden">
+                                <div className="max-h-[calc(100vh-380px)] overflow-y-auto overscroll-contain divide-y divide-gray-100 md:hidden">
                                     {trainingSessions.map(
                                         (
                                             training

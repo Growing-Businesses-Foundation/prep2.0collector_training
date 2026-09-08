@@ -228,7 +228,7 @@ export default function RecentTrainings({
             ) : (
                 <>
                     {/* Desktop Table */}
-                    <div className="hidden overflow-x-auto md:block">
+                    <div className="hidden max-h-[calc(100vh-400px)] overflow-y-auto overflow-x-auto overscroll-contain md:block">
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="border-b border-gray-100 bg-gray-50/70">
@@ -360,7 +360,7 @@ export default function RecentTrainings({
                     </div>
 
                     {/* Mobile Cards */}
-                    <div className="divide-y divide-gray-100 md:hidden">
+                    <div className="max-h-[calc(100vh-350px)] divide-y divide-gray-100 overflow-y-auto overscroll-contain md:hidden">
                         {trainings.map((training) => {
                             const status = getStatusStyles(
                                 training.trainingStatus
