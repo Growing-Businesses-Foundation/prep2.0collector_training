@@ -2,6 +2,7 @@
 
 import { ReactNode, useState } from "react";
 import Sidebar from "./Sidebar";
+import SessionTimeout from "@/components/auth/SessionTimeout";
 
 interface AppShellProps {
     children: ReactNode;
@@ -16,6 +17,7 @@ export default function AppShell({
 
     return (
         <div className="h-screen overflow-hidden bg-gray-100">
+            <SessionTimeout />
             <div className="flex h-screen">
                 <Sidebar
                     role={role}
