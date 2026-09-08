@@ -7,6 +7,7 @@ import { authOptions } from "@/lib/auth";
 import AppShell from "@/components/layout/AppShell";
 import TrainingFilters from "@/components/training/TrainingFilters";
 import clientPromise from "@/lib/mongodb";
+import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh";
 
 interface TrainingSessionsPageProps {
     searchParams?: Promise<{
@@ -345,6 +346,7 @@ export default async function TrainingSessionsPage({
         <AppShell
             role={session.user.role}
         >
+            <DashboardAutoRefresh />
             <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto w-full max-w-7xl">
 

@@ -6,6 +6,7 @@ import AppShell from "@/components/layout/AppShell";
 import DashboardStats from "@/components/dashboard/DashboardStats";
 import RecentTrainings from "@/components/dashboard/RecentTrainings";
 import DashboardActions from "@/components/dashboard/DashboardActions";
+import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh";
 import { getDashboardData } from "@/lib/dashboard";
 
 export default async function DashboardPage() {
@@ -22,6 +23,7 @@ export default async function DashboardPage() {
 
     return (
         <AppShell role={session.user.role}>
+            <DashboardAutoRefresh />
             <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto max-w-7xl">
 

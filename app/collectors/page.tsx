@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import AppShell from "@/components/layout/AppShell";
+import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh";
 import CollectorFilters from "@/components/collectors/CollectorFilters";
 import clientPromise from "@/lib/mongodb";
 
@@ -383,6 +384,7 @@ export default async function CollectorsPage({
         <AppShell
             role={session.user.role}
         >
+            <DashboardAutoRefresh />
             <div className="px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto max-w-7xl">
 
