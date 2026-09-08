@@ -1,11 +1,12 @@
 // lib/mongodb.ts
 
 import { MongoClient, ServerApiVersion } from "mongodb";
+import { attachDatabasePool } from "@vercel/functions";
 
 const uri = process.env.MONGODB_URI;
 
 if (!uri) {
-    throw new Error("Please define MONGODB_URI in your environment variables..");
+    throw new Error("Please define MONGODB_URI in your environment variables.");
 }
 
 const options = {
@@ -15,21 +16,22 @@ const options = {
         deprecationErrors: true,
     },
 
-    maxPoolSize: 20,
-    maxIdleTimeMS: 60_000,
-    waitQueueTimeoutMS: 10_000,
+    // Close idle connections relatively quickly on Vercel
+    maxIdleTimeMS: 5_000,
 };
 
 declare global {
-    var _mongoClientPromise: Promise<MongoClient> | undefined;
+    var _mongoClient: MongoClient | undefined;
 }
 
-if (!global._mongoClientPromise) {
-    const client = new MongoClient(uri, options);
+const client =
+    global._mongoClient ??
+    new MongoClient(uri, options);
 
-    global._mongoClientPromise = client.connect();
+if (!global._mongoClient) {
+    global._mongoClient = client;
 }
 
-const clientPromise = global._mongoClientPromise;
+attachDatabasePool(client);
 
-export default clientPromise;
+export default client;
