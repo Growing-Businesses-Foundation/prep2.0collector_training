@@ -160,7 +160,8 @@ export async function PUT(
          * the logged-in user's account.
          *
          * ADMIN:
-         * Can change the Field Officer.
+         * Can keep the existing Field Officer or
+         * change it to another active Field Officer.
          */
         let assignedFieldOfficerId: string;
         let fieldOfficerName: string;
@@ -177,9 +178,7 @@ export async function PUT(
                 );
             }
 
-            assignedFieldOfficerId = String(
-                user.foId
-            ).trim();
+            assignedFieldOfficerId = String(user.foId).trim();
 
             fieldOfficerName =
                 user.name || "Field Officer";
@@ -195,30 +194,52 @@ export async function PUT(
                 );
             }
 
-            assignedFieldOfficerId =
-                fieldOfficerId;
+            assignedFieldOfficerId = fieldOfficerId;
 
-            const fieldOfficer =
-                await db
-                    .collection("field_officers")
-                    .findOne({
-                        foId: assignedFieldOfficerId,
-                        isActive: true,
-                    });
+            /*
+             * If the ADMIN is keeping the same Field Officer
+             * already assigned to this training session, do not
+             * require that Field Officer to still be active.
+             *
+             * This allows historical training records to remain
+             * editable even if the Field Officer has since been
+             * deactivated.
+             */
+            if (
+                assignedFieldOfficerId ===
+                existingSession.fieldOfficerId
+            ) {
+                fieldOfficerName =
+                    existingSession.fieldOfficerName ||
+                    "Field Officer";
+            } else {
+                /*
+                 * The ADMIN is assigning a different Field Officer.
+                 *
+                 * A new Field Officer must exist and be active.
+                 */
+                const fieldOfficer =
+                    await db
+                        .collection("field_officers")
+                        .findOne({
+                            foId: assignedFieldOfficerId,
+                            isActive: true,
+                        });
 
-            if (!fieldOfficer) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message:
-                            "Field Officer not found or inactive.",
-                    },
-                    { status: 404 }
-                );
+                if (!fieldOfficer) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            message:
+                                "Field Officer not found or inactive.",
+                        },
+                        { status: 404 }
+                    );
+                }
+
+                fieldOfficerName =
+                    fieldOfficer.name;
             }
-
-            fieldOfficerName =
-                fieldOfficer.name;
         }
 
         /*
