@@ -1,6 +1,6 @@
 {
   "name": "prep2.0cluster",
-  "version": "1.0.0",
+  "version": "2.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
