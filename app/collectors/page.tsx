@@ -258,26 +258,27 @@ export default async function CollectorsPage({
                         collector.trainingSessionId.toString()
                     );
 
+
                 return {
                     id: collector._id.toString(),
 
-                    fullName:
-                        collector.fullName,
+                    fullName: collector.fullName,
 
-                    gender:
-                        collector.gender,
+                    gender: collector.gender,
 
-                    phoneNumber:
-                        collector.phoneNumber,
+                    phoneNumber: collector.phoneNumber,
 
-                    newlyRecruited:
-                        collector.newlyRecruited,
+                    newlyRecruited: collector.newlyRecruited,
 
                     trainingSessionId:
                         collector.trainingSessionId.toString(),
 
                     trainingDate:
                         training?.trainingDate ||
+                        null,
+
+                    addedToSystem:
+                        collector.createdAt ||
                         null,
 
                     fieldOfficerId:
@@ -296,6 +297,7 @@ export default async function CollectorsPage({
                         training?.community ||
                         "—",
                 };
+
             }
         );
 
@@ -381,8 +383,8 @@ export default async function CollectorsPage({
         <AppShell
             role={session.user.role}
         >
-            <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8">
-                <div className="mx-auto w-full max-w-7xl">
+            <div className="px-4 py-6 sm:px-6 sm:py-8">
+                <div className="mx-auto max-w-7xl">
 
                     {/* Header */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -504,7 +506,7 @@ export default async function CollectorsPage({
                         ) : (
                             <>
                                 {/* Desktop */}
-                                <div className="hidden max-h-[calc(100vh-420px)] overflow-y-auto overflow-x-auto overscroll-contain md:block">
+                                <div className="hidden h-[calc(100vh-430px)] overflow-y-auto overflow-x-auto overscroll-contain md:block">
                                     <table className="w-full text-left">
                                         <thead className="border-b border-gray-200 bg-gray-50">
                                             <tr>
@@ -549,28 +551,41 @@ export default async function CollectorsPage({
                                                         }
                                                         className="transition hover:bg-gray-50"
                                                     >
+
                                                         <td className="px-5 py-4">
                                                             <p className="text-sm font-semibold text-gray-900">
-                                                                {
-                                                                    collector.fullName
-                                                                }
+                                                                {collector.fullName}
                                                             </p>
 
-                                                            <p className="mt-1 text-xs text-gray-500">
-                                                                {collector.trainingDate
-                                                                    ? new Date(
-                                                                        collector.trainingDate
-                                                                    ).toLocaleDateString(
-                                                                        "en-NG",
-                                                                        {
+                                                            <div className="mt-1 space-y-0.5">
+                                                                <p className="text-xs text-gray-500">
+                                                                    Training date:{" "}
+                                                                    {collector.trainingDate
+                                                                        ? new Date(
+                                                                            collector.trainingDate
+                                                                        ).toLocaleDateString("en-NG", {
                                                                             day: "2-digit",
                                                                             month: "short",
                                                                             year: "numeric",
-                                                                        }
-                                                                    )
-                                                                    : "—"}
-                                                            </p>
+                                                                        })
+                                                                        : "—"}
+                                                                </p>
+
+                                                                <p className="text-xs text-gray-500">
+                                                                    Recorded:{" "}
+                                                                    {collector.addedToSystem
+                                                                        ? new Date(
+                                                                            collector.addedToSystem
+                                                                        ).toLocaleDateString("en-NG", {
+                                                                            day: "2-digit",
+                                                                            month: "short",
+                                                                            year: "numeric",
+                                                                        })
+                                                                        : "—"}
+                                                                </p>
+                                                            </div>
                                                         </td>
+
 
                                                         <td className="px-5 py-4 text-sm text-gray-700">
                                                             {
@@ -631,7 +646,7 @@ export default async function CollectorsPage({
                                 </div>
 
                                 {/* Mobile */}
-                                <div className="max-h-[calc(100vh-380px)] divide-y divide-gray-100 overflow-y-auto overscroll-contain md:hidden">
+                                <div className="h-[calc(100vh-380px)] divide-y divide-gray-100 overflow-y-auto overscroll-contain md:hidden">
                                     {collectorRecords.map(
                                         (
                                             collector
@@ -720,21 +735,41 @@ export default async function CollectorsPage({
                                                     </div>
                                                 </div>
 
-                                                <p className="mt-4 text-xs text-gray-500">
-                                                    Training date:{" "}
-                                                    {collector.trainingDate
-                                                        ? new Date(
-                                                            collector.trainingDate
-                                                        ).toLocaleDateString(
-                                                            "en-NG",
-                                                            {
-                                                                day: "2-digit",
-                                                                month: "short",
-                                                                year: "numeric",
-                                                            }
-                                                        )
-                                                        : "—"}
-                                                </p>
+
+                                                <div className="mt-4 space-y-1">
+                                                    <p className="text-xs text-gray-500">
+                                                        Training date:{" "}
+                                                        {collector.trainingDate
+                                                            ? new Date(
+                                                                collector.trainingDate
+                                                            ).toLocaleDateString(
+                                                                "en-NG",
+                                                                {
+                                                                    day: "2-digit",
+                                                                    month: "short",
+                                                                    year: "numeric",
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </p>
+
+                                                    <p className="text-xs text-gray-500">
+                                                        Recorded:{" "}
+                                                        {collector.addedToSystem
+                                                            ? new Date(
+                                                                collector.addedToSystem
+                                                            ).toLocaleDateString(
+                                                                "en-NG",
+                                                                {
+                                                                    day: "2-digit",
+                                                                    month: "short",
+                                                                    year: "numeric",
+                                                                }
+                                                            )
+                                                            : "—"}
+                                                    </p>
+                                                </div>
+
                                             </div>
                                         )
                                     )}
