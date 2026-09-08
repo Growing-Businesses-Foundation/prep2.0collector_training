@@ -2,107 +2,349 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
+
 import { authOptions } from "@/lib/auth";
 import AppShell from "@/components/layout/AppShell";
+import TrainingFilters from "@/components/training/TrainingFilters";
 import clientPromise from "@/lib/mongodb";
 
-export default async function TrainingSessionsPage() {
-    const session = await getServerSession(authOptions);
+interface TrainingSessionsPageProps {
+    searchParams?: Promise<{
+        search?: string;
+        fieldOfficer?: string;
+        lga?: string;
+        status?: string;
+        fromDate?: string;
+        toDate?: string;
+    }>;
+}
+
+export default async function TrainingSessionsPage({
+    searchParams,
+}: TrainingSessionsPageProps) {
+    const session =
+        await getServerSession(authOptions);
 
     if (!session?.user) {
         redirect("/login");
     }
 
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB);
+    const params =
+        await searchParams;
 
-    const query =
-        session.user.role === "WRITE"
-            ? { fieldOfficerId: session.user.foId }
-            : {};
+    const search =
+        params?.search?.trim() || "";
 
-    const trainings = await db
-        .collection("training_sessions")
-        .find(query)
-        .sort({
-            trainingDate: -1,
-            createdAt: -1,
-        })
-        .project({
-            _id: 1,
-            trainingDate: 1,
-            fieldOfficerId: 1,
-            clusterName: 1,
-            lga: 1,
-            community: 1,
-            expectedCollectors: 1,
-            trainingStatus: 1,
-        })
-        .toArray();
+    const fieldOfficer =
+        params?.fieldOfficer?.trim() || "";
 
-    const sessionIds = trainings.map((training) => training._id);
+    const lga =
+        params?.lga?.trim() || "";
 
-    const collectorCounts = await db
-        .collection("collectors")
-        .aggregate([
-            {
-                $match: {
-                    trainingSessionId: {
-                        $in: sessionIds,
-                    },
-                },
-            },
-            {
-                $group: {
-                    _id: "$trainingSessionId",
-                    count: {
-                        $sum: 1,
-                    },
-                },
-            },
-        ])
-        .toArray();
+    const status =
+        params?.status?.trim() || "";
 
-    const collectorCountMap = new Map(
-        collectorCounts.map((item) => [
-            item._id.toString(),
-            item.count,
-        ])
-    );
+    const fromDate =
+        params?.fromDate?.trim() || "";
 
-    const trainingSessions = trainings.map((training) => {
-        const recordedCollectors =
-            collectorCountMap.get(training._id.toString()) || 0;
+    const toDate =
+        params?.toDate?.trim() || "";
 
-        const expectedCollectors = Number(
-            training.expectedCollectors || 0
+    const client =
+        await clientPromise;
+
+    const db =
+        client.db(
+            process.env.MONGODB_DB
         );
 
-        let trainingStatus: string;
+    /*
+     * ------------------------------------------------------------
+     * TRAINING SESSION QUERY
+     * ------------------------------------------------------------
+     */
 
-        if (recordedCollectors === 0) {
-            trainingStatus = "Not Started";
-        } else if (recordedCollectors >= expectedCollectors) {
-            trainingStatus = "Completed";
-        } else {
-            trainingStatus = "In Progress";
+    const query: Record<string, unknown> =
+        session.user.role === "WRITE"
+            ? {
+                fieldOfficerId:
+                    session.user.foId,
+            }
+            : {};
+
+    /*
+     * Cluster search
+     */
+    if (search) {
+        query.clusterName = {
+            $regex: search,
+            $options: "i",
+        };
+    }
+
+    /*
+     * Field Officer filter
+     *
+     * WRITE users must always remain restricted
+     * to their own Field Officer ID.
+     */
+    if (
+        session.user.role !== "WRITE" &&
+        fieldOfficer
+    ) {
+        query.fieldOfficerId =
+            fieldOfficer;
+    }
+
+    /*
+     * LGA filter
+     */
+    if (lga) {
+        query.lga = {
+            $regex: `^${lga}$`,
+            $options: "i",
+        };
+    }
+
+    /*
+     * Date filtering
+     *
+     * trainingDate is stored as YYYY-MM-DD,
+     * so string comparison works correctly.
+     */
+    if (fromDate || toDate) {
+        const dateQuery: Record<
+            string,
+            string
+        > = {};
+
+        if (fromDate) {
+            dateQuery.$gte =
+                fromDate;
         }
 
-        return {
-            id: training._id.toString(),
-            trainingDate: training.trainingDate,
-            fieldOfficerId: training.fieldOfficerId,
-            clusterName: training.clusterName,
-            lga: training.lga,
-            community: training.community,
-            expectedCollectors,
-            recordedCollectors,
-            trainingStatus,
-        };
-    });
+        if (toDate) {
+            dateQuery.$lte =
+                toDate;
+        }
+
+        query.trainingDate =
+            dateQuery;
+    }
+
+    const trainings =
+        await db
+            .collection(
+                "training_sessions"
+            )
+            .find(query)
+            .sort({
+                trainingDate: -1,
+                createdAt: -1,
+            })
+            .project({
+                _id: 1,
+                trainingDate: 1,
+                fieldOfficerId: 1,
+                clusterName: 1,
+                lga: 1,
+                community: 1,
+                expectedCollectors: 1,
+                trainingStatus: 1,
+            })
+            .toArray();
+
+    /*
+     * ------------------------------------------------------------
+     * COLLECTOR COUNTS
+     * ------------------------------------------------------------
+     */
+
+    const sessionIds =
+        trainings.map(
+            (training) =>
+                training._id
+        );
+
+    const collectorCounts =
+        sessionIds.length > 0
+            ? await db
+                .collection(
+                    "collectors"
+                )
+                .aggregate([
+                    {
+                        $match: {
+                            trainingSessionId:
+                            {
+                                $in: sessionIds,
+                            },
+                        },
+                    },
+                    {
+                        $group: {
+                            _id: "$trainingSessionId",
+                            count: {
+                                $sum: 1,
+                            },
+                        },
+                    },
+                ])
+                .toArray()
+            : [];
+
+    const collectorCountMap =
+        new Map(
+            collectorCounts.map(
+                (item) => [
+                    item._id.toString(),
+                    item.count,
+                ]
+            )
+        );
+
+    /*
+     * ------------------------------------------------------------
+     * CALCULATE TRAINING STATUS
+     * ------------------------------------------------------------
+     */
+
+    let trainingSessions =
+        trainings.map(
+            (training) => {
+                const recordedCollectors =
+                    collectorCountMap.get(
+                        training._id.toString()
+                    ) || 0;
+
+                const expectedCollectors =
+                    Number(
+                        training.expectedCollectors ||
+                        0
+                    );
+
+                let trainingStatus:
+                    | "Not Started"
+                    | "In Progress"
+                    | "Completed";
+
+                if (
+                    recordedCollectors ===
+                    0
+                ) {
+                    trainingStatus =
+                        "Not Started";
+                } else if (
+                    expectedCollectors >
+                    0 &&
+                    recordedCollectors >=
+                    expectedCollectors
+                ) {
+                    trainingStatus =
+                        "Completed";
+                } else {
+                    trainingStatus =
+                        "In Progress";
+                }
+
+                return {
+                    id: training._id.toString(),
+                    trainingDate:
+                        training.trainingDate,
+                    fieldOfficerId:
+                        training.fieldOfficerId,
+                    clusterName:
+                        training.clusterName,
+                    lga: training.lga,
+                    community:
+                        training.community,
+                    expectedCollectors,
+                    recordedCollectors,
+                    trainingStatus,
+                };
+            }
+        );
+
+    /*
+     * ------------------------------------------------------------
+     * STATUS FILTER
+     *
+     * Status is calculated from collector counts,
+     * so it must be filtered after that calculation.
+     * ------------------------------------------------------------
+     */
+
+    if (status) {
+        trainingSessions =
+            trainingSessions.filter(
+                (training) =>
+                    training.trainingStatus ===
+                    status
+            );
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * FILTER OPTIONS
+     *
+     * These are restricted for WRITE users to their
+     * own training sessions.
+     * ------------------------------------------------------------
+     */
+
+    const fieldOfficers =
+        Array.from(
+            new Set(
+                trainings
+                    .map(
+                        (training) =>
+                            training.fieldOfficerId
+                    )
+                    .filter(Boolean)
+                    .map(String)
+            )
+        ).sort();
+
+    const lgas =
+        Array.from(
+            new Set(
+                trainings
+                    .map(
+                        (training) =>
+                            training.lga
+                    )
+                    .filter(Boolean)
+                    .map(String)
+            )
+        ).sort();
+
+    /*
+     * ------------------------------------------------------------
+     * SUMMARY
+     * ------------------------------------------------------------
+     */
+
+    const totalSessions =
+        trainingSessions.length;
+
+    const completedSessions =
+        trainingSessions.filter(
+            (training) =>
+                training.trainingStatus ===
+                "Completed"
+        ).length;
+
+    const inProgressSessions =
+        trainingSessions.filter(
+            (training) =>
+                training.trainingStatus ===
+                "In Progress"
+        ).length;
 
     return (
-        <AppShell role={session.user.role}>
+        <AppShell
+            role={session.user.role}
+        >
             <div className="px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto max-w-7xl">
 
@@ -118,30 +360,43 @@ export default async function TrainingSessionsPage() {
                             </h1>
 
                             <p className="mt-2 text-sm text-gray-500">
-                                View and manage training sessions recorded
-                                in the system.
+                                View and manage
+                                training sessions
+                                recorded in the
+                                system.
                             </p>
                         </div>
 
-                        {session.user.role !== "READ_ONLY" && (
-                            <Link
-                                href="/training/new"
-                                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
-                            >
-                                + New Training
-                            </Link>
-                        )}
+                        {session.user.role !==
+                            "READ_ONLY" && (
+                                <Link
+                                    href="/training/new"
+                                    className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
+                                >
+                                    + New Training
+                                </Link>
+                            )}
                     </div>
 
+                    {/* Filters */}
+                    <TrainingFilters
+                        fieldOfficers={
+                            fieldOfficers
+                        }
+                        lgas={lgas}
+                    />
+
                     {/* Summary */}
-                    <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                    <div className="mt-6 grid gap-4 sm:grid-cols-3">
                         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                             <p className="text-sm font-medium text-gray-500">
                                 Total Sessions
                             </p>
 
                             <p className="mt-2 text-3xl font-bold text-gray-900">
-                                {trainingSessions.length}
+                                {
+                                    totalSessions
+                                }
                             </p>
                         </div>
 
@@ -152,11 +407,7 @@ export default async function TrainingSessionsPage() {
 
                             <p className="mt-2 text-3xl font-bold text-gray-900">
                                 {
-                                    trainingSessions.filter(
-                                        (training) =>
-                                            training.trainingStatus ===
-                                            "Completed"
-                                    ).length
+                                    completedSessions
                                 }
                             </p>
                         </div>
@@ -168,11 +419,7 @@ export default async function TrainingSessionsPage() {
 
                             <p className="mt-2 text-3xl font-bold text-gray-900">
                                 {
-                                    trainingSessions.filter(
-                                        (training) =>
-                                            training.trainingStatus ===
-                                            "In Progress"
-                                    ).length
+                                    inProgressSessions
                                 }
                             </p>
                         </div>
@@ -180,25 +427,31 @@ export default async function TrainingSessionsPage() {
 
                     {/* Training Sessions */}
                     <div className="mt-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                        {trainingSessions.length === 0 ? (
+
+                        {trainingSessions.length ===
+                            0 ? (
                             <div className="px-5 py-12 text-center">
                                 <p className="text-sm font-semibold text-gray-900">
-                                    No training sessions found.
+                                    No training
+                                    sessions found.
                                 </p>
 
                                 <p className="mt-1 text-sm text-gray-500">
-                                    Create a training session to get
-                                    started.
+                                    Try changing
+                                    your filters or
+                                    create a new
+                                    training session.
                                 </p>
 
-                                {session.user.role !== "READ_ONLY" && (
-                                    <Link
-                                        href="/training/new"
-                                        className="mt-5 inline-flex rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
-                                    >
-                                        Create Training
-                                    </Link>
-                                )}
+                                {session.user.role !==
+                                    "READ_ONLY" && (
+                                        <Link
+                                            href="/training/new"
+                                            className="mt-5 inline-flex rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                                        >
+                                            Create Training
+                                        </Link>
+                                    )}
                             </div>
                         ) : (
                             <>
@@ -237,9 +490,13 @@ export default async function TrainingSessionsPage() {
 
                                         <tbody className="divide-y divide-gray-100">
                                             {trainingSessions.map(
-                                                (training) => (
+                                                (
+                                                    training
+                                                ) => (
                                                     <tr
-                                                        key={training.id}
+                                                        key={
+                                                            training.id
+                                                        }
                                                         className="transition hover:bg-gray-50"
                                                     >
                                                         <td className="whitespace-nowrap px-5 py-4 text-sm text-gray-700">
@@ -317,14 +574,29 @@ export default async function TrainingSessionsPage() {
                                                             </span>
                                                         </td>
 
-                                                        <td className="px-5 py-4 text-right">
-                                                            <Link
-                                                                href={`/training/${training.id}/collectors`}
-                                                                className="text-sm font-medium text-gray-900 hover:underline"
-                                                            >
-                                                                View →
-                                                            </Link>
+                                                        <td className="px-5 py-4">
+                                                            <div className="flex items-center justify-end gap-2">
+                                                                <Link
+                                                                    href={`/training/${training.id}/collectors`}
+                                                                    className="rounded-lg px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100 hover:text-gray-900"
+                                                                >
+                                                                    View
+                                                                </Link>
+
+                                                                {(
+                                                                    session.user.role === "ADMIN" ||
+                                                                    session.user.role === "WRITE"
+                                                                ) && (
+                                                                        <Link
+                                                                            href={`/training/${training.id}/edit`}
+                                                                            className="rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-green-700"
+                                                                        >
+                                                                            Edit
+                                                                        </Link>
+                                                                    )}
+                                                            </div>
                                                         </td>
+
                                                     </tr>
                                                 )
                                             )}
@@ -335,11 +607,12 @@ export default async function TrainingSessionsPage() {
                                 {/* Mobile */}
                                 <div className="divide-y divide-gray-100 md:hidden">
                                     {trainingSessions.map(
-                                        (training) => (
-                                            <Link
+                                        (
+                                            training
+                                        ) => (
+                                            <div
                                                 key={training.id}
-                                                href={`/training/${training.id}/collectors`}
-                                                className="block p-5 transition hover:bg-gray-50"
+                                                className="p-5 transition hover:bg-gray-50"
                                             >
                                                 <div className="flex items-start justify-between gap-4">
                                                     <div>
@@ -426,15 +699,35 @@ export default async function TrainingSessionsPage() {
                                                         </p>
 
                                                         <p className="mt-1 text-sm font-medium text-gray-900">
-                                                            {training.lga}
+                                                            {
+                                                                training.lga
+                                                            }
                                                         </p>
                                                     </div>
                                                 </div>
 
-                                                <div className="mt-4 text-right text-sm font-medium text-gray-900">
-                                                    View Training →
+                                                <div className="mt-5 flex items-center justify-end gap-2">
+                                                    <Link
+                                                        href={`/training/${training.id}/collectors`}
+                                                        className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-900"
+                                                    >
+                                                        View
+                                                    </Link>
+
+                                                    {(
+                                                        session.user.role === "ADMIN" ||
+                                                        session.user.role === "WRITE"
+                                                    ) && (
+                                                            <Link
+                                                                href={`/training/${training.id}/edit`}
+                                                                className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-green-700"
+                                                            >
+                                                                Edit
+                                                            </Link>
+                                                        )}
                                                 </div>
-                                            </Link>
+
+                                            </div>
                                         )
                                     )}
                                 </div>

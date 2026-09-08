@@ -6,7 +6,27 @@ interface TrainingFormProps {
     role: "ADMIN" | "WRITE" | "READ_ONLY";
     foId?: string;
     foName?: string;
+
+    // Edit mode
+    mode?: "create" | "edit";
+    trainingSessionId?: string;
+
+    initialData?: {
+        trainingDate: string;
+        fieldOfficerId: string;
+        fieldOfficerName?: string;
+        clusterName: string;
+        lga: string;
+        community: string;
+        venue: string;
+        facilitator: string;
+        expectedCollectors: number;
+        latitude: number;
+        longitude: number;
+        photoUrl?: string | null;
+    };
 }
+
 
 function CalendarIcon() {
     return (
@@ -365,27 +385,30 @@ export default function TrainingForm({
     role,
     foId,
     foName,
+    mode = "create",
+    trainingSessionId,
+    initialData,
 }: TrainingFormProps) {
     const [trainingDate, setTrainingDate] =
-        useState("");
+        useState(initialData?.trainingDate || "");
 
     const [fieldOfficerId, setFieldOfficerId] =
-        useState(foId || "");
+        useState(initialData?.fieldOfficerId || foId || "");
 
     const [clusterName, setClusterName] =
-        useState("");
+        useState(initialData?.clusterName || "");
 
     const [lga, setLga] =
-        useState("");
+        useState(initialData?.lga || "");
 
     const [community, setCommunity] =
-        useState("");
+        useState(initialData?.community || "");
 
     const [venue, setVenue] =
-        useState("");
+        useState(initialData?.venue || "");
 
     const [facilitator, setFacilitator] =
-        useState("");
+        useState(initialData?.facilitator || "");
 
     const [photo, setPhoto] =
         useState<File | null>(null);
@@ -393,14 +416,16 @@ export default function TrainingForm({
     const [photoPreview, setPhotoPreview] =
         useState("");
 
+    const existingPhotoUrl = initialData?.photoUrl || "";
+
     const [expectedCollectors, setExpectedCollectors] =
-        useState("");
+        useState(initialData?.expectedCollectors ? String(initialData.expectedCollectors) : "");
 
     const [latitude, setLatitude] =
-        useState("");
+        useState(initialData?.latitude !== undefined ? String(initialData.latitude) : "");
 
     const [longitude, setLongitude] =
-        useState("");
+        useState(initialData?.longitude !== undefined ? String(initialData.longitude) : "");
 
     const [locationLoading, setLocationLoading] =
         useState(false);
@@ -577,12 +602,36 @@ export default function TrainingForm({
             return;
         }
 
-        if (!photo) {
+
+        /*
+         * A photo is mandatory when creating a training session.
+         *
+         * During editing, the existing training photo can remain
+         * unchanged. A new photo is only required if there is no
+         * existing photo.
+         */
+        if (
+            mode === "create" &&
+            !photo
+        ) {
             alert(
                 "Please take or upload a training evidence photo before continuing."
             );
             return;
         }
+
+        if (
+            mode === "edit" &&
+            !photo &&
+            !existingPhotoUrl
+        ) {
+            alert(
+                "This training session does not have an existing evidence photo. Please upload one before saving."
+            );
+            return;
+        }
+
+
 
         if (
             !expectedCollectors ||
@@ -622,12 +671,28 @@ export default function TrainingForm({
                 String(Number(longitude))
             );
 
-            formData.append("photo", photo);
+
+            if (photo) {
+                formData.append("photo", photo);
+            }
+
+
+
+            const isEditMode =
+                mode === "edit";
+
+            const endpoint = isEditMode
+                ? `/api/training-sessions/${trainingSessionId}`
+                : "/api/training-sessions";
+
+            const method = isEditMode
+                ? "PUT"
+                : "POST";
 
             const response = await fetch(
-                "/api/training-sessions",
+                endpoint,
                 {
-                    method: "POST",
+                    method,
                     body: formData,
                 }
             );
@@ -670,35 +735,55 @@ export default function TrainingForm({
             /*
              * The server completed successfully.
              */
+
             if (data.success) {
-                alert(
-                    `Training session created successfully.\n\nSession ID: ${data.trainingSessionId || "Created successfully"} `
-                );
+                if (isEditMode) {
+                    alert(
+                        "Training session updated successfully."
+                    );
+                } else {
+                    alert(
+                        `Training session created successfully.\n\nSession ID: ${data.trainingSessionId ||
+                        "Created successfully"
+                        }`
+                    );
+                }
 
-                // Reset form
-                setTrainingDate("");
-                setClusterName("");
-                setLga("");
-                setCommunity("");
-                setVenue("");
-                setFacilitator("");
-                setExpectedCollectors("");
-                setLatitude("");
-                setLongitude("");
+                /*
+                 * Only reset the form after creating a new
+                 * training session.
+                 *
+                 * During edit mode we will redirect back to
+                 * the Training Sessions page in the next step.
+                 */
+                if (!isEditMode) {
+                    setTrainingDate("");
+                    setClusterName("");
+                    setLga("");
+                    setCommunity("");
+                    setVenue("");
+                    setFacilitator("");
+                    setExpectedCollectors("");
+                    setLatitude("");
+                    setLongitude("");
 
-                removePhoto();
+                    removePhoto();
 
-                if (role === "ADMIN") {
-                    setFieldOfficerId("");
+                    if (role === "ADMIN") {
+                        setFieldOfficerId("");
+                    }
                 }
 
                 console.log(
-                    "Training session created:",
+                    isEditMode
+                        ? "Training session updated:"
+                        : "Training session created:",
                     data
                 );
 
                 return;
             }
+
 
             /*
              * Server responded but did not indicate success.
@@ -1011,7 +1096,14 @@ export default function TrainingForm({
                             <CameraIcon />
                         }
                         title="Training Evidence"
-                        description="Take a new photo with your camera or choose an existing image from your device."
+
+                        description={
+                            mode === "edit"
+                                ? "Keep the existing training evidence or upload a new photo if you need to replace it."
+                                : "Take a new photo with your camera or choose an existing image from your device."
+                        }
+
+
                     />
 
                     {/* Hidden camera input */}
@@ -1043,7 +1135,11 @@ export default function TrainingForm({
                         className="hidden"
                     />
 
-                    {!photo ? (
+                    {!photo && !existingPhotoUrl ? (
+                        /*
+                         * No existing photo and no new photo:
+                         * show the normal upload area.
+                         */
                         <div className="space-y-4">
                             {/* Upload area */}
                             <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-6 text-center">
@@ -1056,16 +1152,11 @@ export default function TrainingForm({
                                 </p>
 
                                 <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-gray-500">
-                                    Take a new photo
-                                    of the training
-                                    session or
-                                    select an
-                                    existing image
-                                    from your
-                                    phone.
+                                    Take a new photo of the training session
+                                    or select an existing image from your phone.
                                 </p>
 
-                                {/* Two options */}
+                                {/* Camera / Gallery options */}
                                 <div className="mt-5 grid gap-3 sm:grid-cols-2">
                                     <button
                                         type="button"
@@ -1091,9 +1182,8 @@ export default function TrainingForm({
                                 </div>
 
                                 <p className="mt-4 text-[11px] text-gray-400">
-                                    JPG, PNG or
-                                    other image •
-                                    Maximum 3MB after compression
+                                    JPG, PNG or other image • Maximum 3MB after
+                                    compression
                                 </p>
                             </div>
 
@@ -1105,36 +1195,32 @@ export default function TrainingForm({
 
                                 <div>
                                     <p className="text-xs font-semibold text-orange-800">
-                                        Training evidence
-                                        is required
+                                        Training evidence is required
                                     </p>
 
                                     <p className="mt-0.5 text-xs leading-5 text-orange-700">
-                                        Please ensure
-                                        the photo
-                                        clearly shows
-                                        the training
-                                        session and
-                                        venue.
+                                        Please ensure the photo clearly shows
+                                        the training session and venue.
                                     </p>
                                 </div>
                             </div>
                         </div>
-                    ) : (
+                    ) : photo ? (
+                        /*
+                         * A NEW photo has been selected.
+                         */
                         <div className="rounded-2xl border border-green-200 bg-green-50/40 p-4">
-                            {/* Preview */}
+                            {/* New photo preview */}
                             {photoPreview && (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                    src={
-                                        photoPreview
-                                    }
-                                    alt="Training evidence preview"
+                                    src={photoPreview}
+                                    alt="New training evidence preview"
                                     className="max-h-96 w-full rounded-xl object-cover shadow-sm"
                                 />
                             )}
 
-                            {/* File information */}
+                            {/* New photo information */}
                             <div className="mt-4 flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 sm:flex-row sm:items-center sm:justify-between">
                                 <div className="flex min-w-0 items-center gap-3">
                                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-600">
@@ -1143,34 +1229,23 @@ export default function TrainingForm({
 
                                     <div className="min-w-0">
                                         <p className="truncate text-sm font-semibold text-gray-800">
-                                            {
-                                                photo.name
-                                            }
+                                            {photo.name}
                                         </p>
 
                                         <p className="mt-0.5 text-xs text-gray-400">
-                                            {(
-                                                photo.size /
-                                                1024 /
-                                                1024
-                                            ).toFixed(
-                                                2
-                                            )}{" "}
-                                            MB
+                                            {(photo.size / 1024 / 1024).toFixed(2)} MB
                                         </p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-2">
                                     <span className="rounded-full bg-green-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-green-700">
-                                        Selected
+                                        New Photo
                                     </span>
 
                                     <button
                                         type="button"
-                                        onClick={
-                                            removePhoto
-                                        }
+                                        onClick={removePhoto}
                                         className="rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
                                     >
                                         Remove
@@ -1178,7 +1253,7 @@ export default function TrainingForm({
                                 </div>
                             </div>
 
-                            {/* Change photo options */}
+                            {/* Replace new photo */}
                             <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                 <button
                                     type="button"
@@ -1203,7 +1278,93 @@ export default function TrainingForm({
                                 </button>
                             </div>
                         </div>
+                    ) : (
+                        /*
+                         * EDIT MODE:
+                         * Existing Google Drive photo is available and the
+                         * user has NOT selected a replacement photo.
+                         */
+                        <div className="rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
+                            {/* Existing photo preview */}
+                            {existingPhotoUrl && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                    src={existingPhotoUrl}
+                                    alt="Existing training evidence"
+                                    className="max-h-96 w-full rounded-xl object-cover shadow-sm"
+                                />
+                            )}
+
+                            {/* Existing photo information */}
+                            <div className="mt-4 flex flex-col gap-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-100 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex min-w-0 items-center gap-3">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                                        <ImageIcon />
+                                    </div>
+
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-semibold text-gray-800">
+                                            Existing training evidence
+                                        </p>
+
+                                        <p className="mt-0.5 text-xs leading-5 text-gray-500">
+                                            This photo will remain attached to
+                                            this training session.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <span className="shrink-0 rounded-full bg-gray-100 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-gray-600">
+                                    Existing Photo
+                                </span>
+                            </div>
+
+                            {/* Replace existing photo */}
+                            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        cameraInputRef.current?.click()
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-green-200 bg-white px-4 py-2.5 text-xs font-semibold text-green-700 transition hover:bg-green-50"
+                                >
+                                    <CameraIcon />
+                                    Replace with Camera
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        galleryInputRef.current?.click()
+                                    }
+                                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-xs font-semibold text-gray-700 transition hover:border-green-200 hover:bg-green-50 hover:text-green-700"
+                                >
+                                    <ImageIcon />
+                                    Choose Replacement
+                                </button>
+                            </div>
+
+                            {/* Edit mode information */}
+                            <div className="mt-4 flex items-start gap-3 rounded-xl border border-green-100 bg-green-50/60 px-4 py-3">
+                                <div className="mt-0.5 text-green-600">
+                                    <CheckIcon />
+                                </div>
+
+                                <div>
+                                    <p className="text-xs font-semibold text-green-800">
+                                        Existing evidence will be kept
+                                    </p>
+
+                                    <p className="mt-0.5 text-xs leading-5 text-green-700">
+                                        You only need to choose a replacement
+                                        photo if the existing evidence needs to
+                                        be changed.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     )}
+
                 </div>
             </section>
 

@@ -3,124 +3,387 @@ import { redirect } from "next/navigation";
 
 import { authOptions } from "@/lib/auth";
 import AppShell from "@/components/layout/AppShell";
+import CollectorFilters from "@/components/collectors/CollectorFilters";
 import clientPromise from "@/lib/mongodb";
 
-export default async function CollectorsPage() {
-    const session = await getServerSession(authOptions);
+interface CollectorsPageProps {
+    searchParams?: Promise<{
+        search?: string;
+        gender?: string;
+        recruited?: string;
+        fieldOfficer?: string;
+        lga?: string;
+        cluster?: string;
+        fromDate?: string;
+        toDate?: string;
+    }>;
+}
+
+export default async function CollectorsPage({
+    searchParams,
+}: CollectorsPageProps) {
+    const session =
+        await getServerSession(authOptions);
 
     if (!session?.user) {
         redirect("/login");
     }
 
-    const client = await clientPromise;
-    const db = client.db(process.env.MONGODB_DB);
+    const params =
+        await searchParams;
 
-    /*
-     * Determine which collectors the user is allowed to see.
-     *
-     * ADMIN / READ_ONLY:
-     *   Can see all collectors.
-     *
-     * WRITE:
-     *   Can only see collectors belonging to their
-     *   own training sessions.
-     */
-    const trainingQuery =
-        session.user.role === "WRITE"
-            ? { fieldOfficerId: session.user.foId }
-            : {};
+    const search =
+        params?.search?.trim() || "";
 
-    const trainingSessions = await db
-        .collection("training_sessions")
-        .find(trainingQuery)
-        .project({
-            _id: 1,
-            trainingDate: 1,
-            fieldOfficerId: 1,
-            clusterName: 1,
-            lga: 1,
-            community: 1,
-        })
-        .toArray();
+    const gender =
+        params?.gender?.trim() || "";
 
-    const trainingSessionIds = trainingSessions.map(
-        (training) => training._id
-    );
+    const recruited =
+        params?.recruited?.trim() || "";
 
-    /*
-     * Get collectors belonging to the user's
-     * permitted training sessions.
-     */
-    const collectors = await db
-        .collection("collectors")
-        .find({
-            trainingSessionId: {
-                $in: trainingSessionIds,
-            },
-        })
-        .sort({
-            createdAt: -1,
-        })
-        .toArray();
+    const fieldOfficer =
+        params?.fieldOfficer?.trim() || "";
 
-    /*
-     * Create a quick lookup for training session details.
-     */
-    const trainingMap = new Map(
-        trainingSessions.map((training) => [
-            training._id.toString(),
-            training,
-        ])
-    );
+    const lga =
+        params?.lga?.trim() || "";
 
-    const collectorRecords = collectors.map((collector) => {
-        const training = trainingMap.get(
-            collector.trainingSessionId.toString()
+    const cluster =
+        params?.cluster?.trim() || "";
+
+    const fromDate =
+        params?.fromDate?.trim() || "";
+
+    const toDate =
+        params?.toDate?.trim() || "";
+
+    const client =
+        await clientPromise;
+
+    const db =
+        client.db(
+            process.env.MONGODB_DB
         );
 
-        return {
-            id: collector._id.toString(),
-            fullName: collector.fullName,
-            gender: collector.gender,
-            phoneNumber: collector.phoneNumber,
-            newlyRecruited: collector.newlyRecruited,
+    /*
+     * ------------------------------------------------------------
+     * TRAINING SESSION ACCESS
+     * ------------------------------------------------------------
+     *
+     * ADMIN / READ_ONLY:
+     *   Can see all training sessions.
+     *
+     * WRITE:
+     *   Can only see their own training sessions.
+     */
 
-            trainingSessionId:
-                collector.trainingSessionId.toString(),
+    const trainingQuery: Record<
+        string,
+        unknown
+    > =
+        session.user.role === "WRITE"
+            ? {
+                fieldOfficerId:
+                    session.user.foId,
+            }
+            : {};
 
-            trainingDate: training?.trainingDate || null,
-            fieldOfficerId:
-                training?.fieldOfficerId || "—",
-            clusterName:
-                training?.clusterName || "—",
-            lga: training?.lga || "—",
-            community:
-                training?.community || "—",
+    /*
+     * Field Officer filter
+     *
+     * WRITE users cannot use the URL to access
+     * another Field Officer's collectors.
+     */
+    if (
+        session.user.role !== "WRITE" &&
+        fieldOfficer
+    ) {
+        trainingQuery.fieldOfficerId =
+            fieldOfficer;
+    }
+
+    /*
+     * LGA filter
+     */
+    if (lga) {
+        trainingQuery.lga = {
+            $regex: `^${lga}$`,
+            $options: "i",
         };
-    });
+    }
 
-    const totalCollectors = collectorRecords.length;
+    /*
+     * Cluster filter
+     */
+    if (cluster) {
+        trainingQuery.clusterName = {
+            $regex: `^${cluster}$`,
+            $options: "i",
+        };
+    }
+
+    /*
+     * Training date filter
+     */
+    if (fromDate || toDate) {
+        const dateQuery: Record<
+            string,
+            string
+        > = {};
+
+        if (fromDate) {
+            dateQuery.$gte =
+                fromDate;
+        }
+
+        if (toDate) {
+            dateQuery.$lte =
+                toDate;
+        }
+
+        trainingQuery.trainingDate =
+            dateQuery;
+    }
+
+    /*
+     * ------------------------------------------------------------
+     * GET TRAINING SESSIONS
+     * ------------------------------------------------------------
+     */
+
+    const trainingSessions =
+        await db
+            .collection(
+                "training_sessions"
+            )
+            .find(trainingQuery)
+            .project({
+                _id: 1,
+                trainingDate: 1,
+                fieldOfficerId: 1,
+                clusterName: 1,
+                lga: 1,
+                community: 1,
+            })
+            .toArray();
+
+    const trainingSessionIds =
+        trainingSessions.map(
+            (training) =>
+                training._id
+        );
+
+    /*
+     * ------------------------------------------------------------
+     * GET COLLECTORS
+     * ------------------------------------------------------------
+     */
+
+    const collectorQuery: Record<
+        string,
+        unknown
+    > = {
+        trainingSessionId: {
+            $in: trainingSessionIds,
+        },
+    };
+
+    /*
+     * Gender filter
+     */
+    if (gender) {
+        collectorQuery.gender =
+            gender;
+    }
+
+    /*
+     * Newly recruited filter
+     */
+    if (recruited) {
+        collectorQuery.newlyRecruited =
+            recruited;
+    }
+
+    /*
+     * Collector name search
+     */
+    if (search) {
+        collectorQuery.fullName = {
+            $regex: search,
+            $options: "i",
+        };
+    }
+
+    const collectors =
+        trainingSessionIds.length > 0
+            ? await db
+                .collection(
+                    "collectors"
+                )
+                .find(
+                    collectorQuery
+                )
+                .sort({
+                    createdAt: -1,
+                })
+                .toArray()
+            : [];
+
+    /*
+     * ------------------------------------------------------------
+     * TRAINING SESSION LOOKUP
+     * ------------------------------------------------------------
+     */
+
+    const trainingMap =
+        new Map(
+            trainingSessions.map(
+                (training) => [
+                    training._id.toString(),
+                    training,
+                ]
+            )
+        );
+
+    /*
+     * ------------------------------------------------------------
+     * COMBINE COLLECTOR + TRAINING DATA
+     * ------------------------------------------------------------
+     */
+
+    const collectorRecords =
+        collectors.map(
+            (collector) => {
+                const training =
+                    trainingMap.get(
+                        collector.trainingSessionId.toString()
+                    );
+
+                return {
+                    id: collector._id.toString(),
+
+                    fullName:
+                        collector.fullName,
+
+                    gender:
+                        collector.gender,
+
+                    phoneNumber:
+                        collector.phoneNumber,
+
+                    newlyRecruited:
+                        collector.newlyRecruited,
+
+                    trainingSessionId:
+                        collector.trainingSessionId.toString(),
+
+                    trainingDate:
+                        training?.trainingDate ||
+                        null,
+
+                    fieldOfficerId:
+                        training?.fieldOfficerId ||
+                        "—",
+
+                    clusterName:
+                        training?.clusterName ||
+                        "—",
+
+                    lga:
+                        training?.lga ||
+                        "—",
+
+                    community:
+                        training?.community ||
+                        "—",
+                };
+            }
+        );
+
+    /*
+     * ------------------------------------------------------------
+     * SUMMARY
+     * ------------------------------------------------------------
+     */
+
+    const totalCollectors =
+        collectorRecords.length;
 
     const newlyRecruitedCollectors =
         collectorRecords.filter(
             (collector) =>
-                collector.newlyRecruited === "Yes"
+                collector.newlyRecruited ===
+                "Yes"
         ).length;
 
     const maleCollectors =
         collectorRecords.filter(
-            (collector) => collector.gender === "Male"
+            (collector) =>
+                collector.gender ===
+                "Male"
         ).length;
 
     const femaleCollectors =
         collectorRecords.filter(
-            (collector) => collector.gender === "Female"
+            (collector) =>
+                collector.gender ===
+                "Female"
         ).length;
 
+    /*
+     * ------------------------------------------------------------
+     * FILTER OPTIONS
+     * ------------------------------------------------------------
+     *
+     * These are based on the user's permitted
+     * training sessions.
+     */
+
+    const fieldOfficers =
+        Array.from(
+            new Set(
+                trainingSessions
+                    .map(
+                        (training) =>
+                            training.fieldOfficerId
+                    )
+                    .filter(Boolean)
+                    .map(String)
+            )
+        ).sort();
+
+    const lgas =
+        Array.from(
+            new Set(
+                trainingSessions
+                    .map(
+                        (training) =>
+                            training.lga
+                    )
+                    .filter(Boolean)
+                    .map(String)
+            )
+        ).sort();
+
+    const clusters =
+        Array.from(
+            new Set(
+                trainingSessions
+                    .map(
+                        (training) =>
+                            training.clusterName
+                    )
+                    .filter(Boolean)
+                    .map(String)
+            )
+        ).sort();
+
     return (
-        <AppShell role={session.user.role}>
+        <AppShell
+            role={session.user.role}
+        >
             <div className="px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto max-w-7xl">
+
                     {/* Header */}
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
@@ -133,23 +396,35 @@ export default async function CollectorsPage() {
                             </h1>
 
                             <p className="mt-2 text-sm text-gray-500">
-                                View collectors recorded during training
-                                sessions.
+                                View collectors recorded during
+                                training sessions.
                             </p>
                         </div>
 
-                        {session.user.role !== "READ_ONLY" && (
-                            <a
-                                href="/collectors/new"
-                                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
-                            >
-                                + Add Collector
-                            </a>
-                        )}
+                        {session.user.role !==
+                            "READ_ONLY" && (
+                                <a
+                                    href="/collectors/new"
+                                    className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
+                                >
+                                    + Add Collector
+                                </a>
+                            )}
                     </div>
 
+                    {/* Filters */}
+                    <CollectorFilters
+                        fieldOfficers={
+                            fieldOfficers
+                        }
+                        lgas={lgas}
+                        clusters={
+                            clusters
+                        }
+                    />
+
                     {/* Summary */}
-                    <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
                         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                             <p className="text-sm font-medium text-gray-500">
@@ -157,7 +432,9 @@ export default async function CollectorsPage() {
                             </p>
 
                             <p className="mt-2 text-3xl font-bold text-gray-900">
-                                {totalCollectors}
+                                {
+                                    totalCollectors
+                                }
                             </p>
                         </div>
 
@@ -167,7 +444,9 @@ export default async function CollectorsPage() {
                             </p>
 
                             <p className="mt-2 text-3xl font-bold text-gray-900">
-                                {femaleCollectors}
+                                {
+                                    femaleCollectors
+                                }
                             </p>
                         </div>
 
@@ -177,7 +456,9 @@ export default async function CollectorsPage() {
                             </p>
 
                             <p className="mt-2 text-3xl font-bold text-gray-900">
-                                {maleCollectors}
+                                {
+                                    maleCollectors
+                                }
                             </p>
                         </div>
 
@@ -187,34 +468,38 @@ export default async function CollectorsPage() {
                             </p>
 
                             <p className="mt-2 text-3xl font-bold text-gray-900">
-                                {newlyRecruitedCollectors}
+                                {
+                                    newlyRecruitedCollectors
+                                }
                             </p>
                         </div>
-
                     </div>
 
                     {/* Collector Table */}
                     <div className="mt-8 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
-                        {collectorRecords.length === 0 ? (
+                        {collectorRecords.length ===
+                            0 ? (
                             <div className="px-5 py-12 text-center">
                                 <p className="text-sm font-semibold text-gray-900">
                                     No collectors found.
                                 </p>
 
                                 <p className="mt-1 text-sm text-gray-500">
-                                    Collectors will appear here once they
-                                    are recorded.
+                                    Try changing your
+                                    filters or add a
+                                    new collector.
                                 </p>
 
-                                {session.user.role !== "READ_ONLY" && (
-                                    <a
-                                        href="/collectors/new"
-                                        className="mt-5 inline-flex rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
-                                    >
-                                        Add Collector
-                                    </a>
-                                )}
+                                {session.user.role !==
+                                    "READ_ONLY" && (
+                                        <a
+                                            href="/collectors/new"
+                                            className="mt-5 inline-flex rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                                        >
+                                            Add Collector
+                                        </a>
+                                    )}
                             </div>
                         ) : (
                             <>
@@ -255,9 +540,13 @@ export default async function CollectorsPage() {
 
                                         <tbody className="divide-y divide-gray-100">
                                             {collectorRecords.map(
-                                                (collector) => (
+                                                (
+                                                    collector
+                                                ) => (
                                                     <tr
-                                                        key={collector.id}
+                                                        key={
+                                                            collector.id
+                                                        }
                                                         className="transition hover:bg-gray-50"
                                                     >
                                                         <td className="px-5 py-4">
@@ -298,9 +587,9 @@ export default async function CollectorsPage() {
                                                         <td className="px-5 py-4">
                                                             <span
                                                                 className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                                    "Yes"
-                                                                    ? "bg-green-50 text-green-700"
-                                                                    : "bg-gray-100 text-gray-600"
+                                                                        "Yes"
+                                                                        ? "bg-green-50 text-green-700"
+                                                                        : "bg-gray-100 text-gray-600"
                                                                     }`}
                                                             >
                                                                 {
@@ -344,9 +633,13 @@ export default async function CollectorsPage() {
                                 {/* Mobile */}
                                 <div className="divide-y divide-gray-100 md:hidden">
                                     {collectorRecords.map(
-                                        (collector) => (
+                                        (
+                                            collector
+                                        ) => (
                                             <div
-                                                key={collector.id}
+                                                key={
+                                                    collector.id
+                                                }
                                                 className="p-5"
                                             >
                                                 <div className="flex items-start justify-between gap-4">
@@ -366,9 +659,9 @@ export default async function CollectorsPage() {
 
                                                     <span
                                                         className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                            "Yes"
-                                                            ? "bg-green-50 text-green-700"
-                                                            : "bg-gray-100 text-gray-600"
+                                                                "Yes"
+                                                                ? "bg-green-50 text-green-700"
+                                                                : "bg-gray-100 text-gray-600"
                                                             }`}
                                                     >
                                                         {
@@ -449,7 +742,6 @@ export default async function CollectorsPage() {
                             </>
                         )}
                     </div>
-
                 </div>
             </div>
         </AppShell>
