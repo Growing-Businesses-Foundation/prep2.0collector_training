@@ -1,9 +1,16 @@
-"use client";
+//components/training/TrainingForm.tsx
 
-import { FormEvent, useRef, useState } from "react";
+"use client";
+import type { UserRole } from "@/lib/models/user";
+import {
+    useState,
+    useRef,
+    type FormEvent,
+} from "react";
+
 
 interface TrainingFormProps {
-    role: "ADMIN" | "WRITE" | "READ_ONLY";
+    role: UserRole;
     foId?: string;
     foName?: string;
 
@@ -26,6 +33,7 @@ interface TrainingFormProps {
         photoUrl?: string | null;
     };
 }
+
 
 
 function CalendarIcon() {

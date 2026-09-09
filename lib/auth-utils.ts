@@ -40,7 +40,7 @@
 //     };
 // }
 
-
+// lib/auth-utils.ts
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { ObjectId } from "mongodb";

@@ -1,3 +1,5 @@
+//components/collectors/CollectorFIllters.tsx
+
 "use client";
 
 import {
@@ -6,16 +8,20 @@ import {
     useSearchParams,
 } from "next/navigation";
 
+import { UserRole } from "@/lib/models/user";
+
 interface CollectorFiltersProps {
     fieldOfficers: string[];
     lgas: string[];
     clusters: string[];
+    role: UserRole;
 }
 
 export default function CollectorFilters({
     fieldOfficers,
     lgas,
     clusters,
+    role,
 }: CollectorFiltersProps) {
     const router = useRouter();
     const pathname = usePathname();
@@ -45,6 +51,9 @@ export default function CollectorFilters({
     const currentToDate =
         searchParams.get("toDate") || "";
 
+    const canViewNewlyRecruited =
+        role !== "RESTRICTED_READ_ONLY";
+
     function updateFilter(
         key: string,
         value: string
@@ -71,7 +80,10 @@ export default function CollectorFilters({
     const hasFilters =
         currentSearch ||
         currentGender ||
-        currentRecruited ||
+        (
+            canViewNewlyRecruited &&
+            currentRecruited
+        ) ||
         currentFieldOfficer ||
         currentLga ||
         currentCluster ||
@@ -173,40 +185,42 @@ export default function CollectorFilters({
                     </div>
 
                     {/* Newly Recruited */}
-                    <div>
-                        <label
-                            htmlFor="recruited-filter"
-                            className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                        >
-                            Newly Recruited
-                        </label>
+                    {canViewNewlyRecruited && (
+                        <div>
+                            <label
+                                htmlFor="recruited-filter"
+                                className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                            >
+                                Newly Recruited
+                            </label>
 
-                        <select
-                            id="recruited-filter"
-                            value={
-                                currentRecruited
-                            }
-                            onChange={(event) =>
-                                updateFilter(
-                                    "recruited",
-                                    event.target.value
-                                )
-                            }
-                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-500/10"
-                        >
-                            <option value="">
-                                All
-                            </option>
+                            <select
+                                id="recruited-filter"
+                                value={
+                                    currentRecruited
+                                }
+                                onChange={(event) =>
+                                    updateFilter(
+                                        "recruited",
+                                        event.target.value
+                                    )
+                                }
+                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-500/10"
+                            >
+                                <option value="">
+                                    All
+                                </option>
 
-                            <option value="Yes">
-                                Yes
-                            </option>
+                                <option value="Yes">
+                                    Yes
+                                </option>
 
-                            <option value="No">
-                                No
-                            </option>
-                        </select>
-                    </div>
+                                <option value="No">
+                                    No
+                                </option>
+                            </select>
+                        </div>
+                    )}
 
                     {/* Field Officer */}
                     <div>

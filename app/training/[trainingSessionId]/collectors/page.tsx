@@ -19,12 +19,48 @@ export default async function TrainingSessionCollectorsPage({
 }: PageProps) {
     const session = await getServerSession(authOptions);
 
+    /*
+     * User must be logged in.
+     */
     if (!session?.user) {
         redirect("/login");
     }
 
+    /*
+     * Role permissions.
+     *
+     * ADMIN:
+     * - Can view all training sessions and collectors.
+     * - Can add collectors.
+     * - Can see newly recruited information.
+     *
+     * WRITE:
+     * - Can view their own training sessions and collectors.
+     * - Can add collectors to their own training sessions.
+     * - Can see newly recruited information.
+     *
+     * READ_ONLY:
+     * - Can view all training sessions and collectors.
+     * - Cannot add collectors.
+     * - Can see newly recruited information.
+     *
+     * RESTRICTED_READ_ONLY:
+     * - Can view all training sessions and collectors.
+     * - Cannot add collectors.
+     * - Cannot see newly recruited information.
+     */
+    const canManageCollectors =
+        session.user.role === "ADMIN" ||
+        session.user.role === "WRITE";
+
+    const canViewNewlyRecruited =
+        session.user.role !== "RESTRICTED_READ_ONLY";
+
     const { trainingSessionId } = await params;
 
+    /*
+     * Validate MongoDB ObjectId.
+     */
     if (!ObjectId.isValid(trainingSessionId)) {
         notFound();
     }
@@ -32,17 +68,25 @@ export default async function TrainingSessionCollectorsPage({
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB);
 
-    const trainingSession = await db
-        .collection("training_sessions")
-        .findOne({
+    /*
+     * Get the training session.
+     */
+    const trainingSession =
+        await db.collection("training_sessions").findOne({
             _id: new ObjectId(trainingSessionId),
         });
 
+    /*
+     * Training session does not exist.
+     */
     if (!trainingSession) {
         notFound();
     }
 
-    // WRITE users can only access their own training sessions.
+    /*
+     * WRITE users can only access their own
+     * Field Officer training sessions.
+     */
     if (
         session.user.role === "WRITE" &&
         trainingSession.fieldOfficerId !== session.user.foId
@@ -50,16 +94,44 @@ export default async function TrainingSessionCollectorsPage({
         redirect("/training");
     }
 
+    /*
+     * Fetch collectors.
+     *
+     * RESTRICTED_READ_ONLY users deliberately do not
+     * receive the newlyRecruited field from MongoDB.
+     *
+     * This means the restricted user cannot access that
+     * information through this server-rendered page.
+     */
+    const collectorProjection =
+        session.user.role === "RESTRICTED_READ_ONLY"
+            ? {
+                newlyRecruited: 0,
+            }
+            : undefined;
+
     const collectors = await db
         .collection("collectors")
-        .find({
-            trainingSessionId: new ObjectId(trainingSessionId),
-        })
+        .find(
+            {
+                trainingSessionId: new ObjectId(trainingSessionId),
+            },
+            collectorProjection
+                ? { projection: collectorProjection }
+                : undefined
+        )
         .sort({
             createdAt: 1,
         })
         .toArray();
 
+    /*
+     * Training progress.
+     *
+     * This still counts ALL collectors, including newly
+     * recruited collectors. The restricted role only hides
+     * the newly recruited attribute itself.
+     */
     const expectedCollectors = Number(
         trainingSession.expectedCollectors || 0
     );
@@ -114,15 +186,15 @@ export default async function TrainingSessionCollectorsPage({
                             </p>
                         </div>
 
-                        {!isCompleted &&
-                            session.user.role !== "READ_ONLY" && (
-                                <Link
-                                    href={`/collectors/new?trainingSessionId=${trainingSessionId}`}
-                                    className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
-                                >
-                                    + Add Collector
-                                </Link>
-                            )}
+                        {/* Only ADMIN and WRITE can add collectors */}
+                        {!isCompleted && canManageCollectors && (
+                            <Link
+                                href={`/collectors/new?trainingSessionId=${trainingSessionId}`}
+                                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
+                            >
+                                + Add Collector
+                            </Link>
+                        )}
                     </div>
 
                     {/* Training Overview */}
@@ -135,10 +207,10 @@ export default async function TrainingSessionCollectorsPage({
                             <div className="mt-3">
                                 <span
                                     className={`inline-flex rounded-full px-3 py-1.5 text-sm font-medium ${trainingStatus === "Completed"
-                                        ? "bg-green-50 text-green-700"
-                                        : trainingStatus === "In Progress"
-                                            ? "bg-blue-50 text-blue-700"
-                                            : "bg-yellow-50 text-yellow-700"
+                                            ? "bg-green-50 text-green-700"
+                                            : trainingStatus === "In Progress"
+                                                ? "bg-blue-50 text-blue-700"
+                                                : "bg-yellow-50 text-yellow-700"
                                         }`}
                                 >
                                     {trainingStatus}
@@ -356,18 +428,19 @@ export default async function TrainingSessionCollectorsPage({
                                     recording this training session.
                                 </p>
 
-                                {!isCompleted &&
-                                    session.user.role !== "READ_ONLY" && (
-                                        <Link
-                                            href={`/collectors/new?trainingSessionId=${trainingSessionId}`}
-                                            className="mt-5 inline-flex rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
-                                        >
-                                            + Add Collector
-                                        </Link>
-                                    )}
+                                {/* Only ADMIN and WRITE can add collectors */}
+                                {!isCompleted && canManageCollectors && (
+                                    <Link
+                                        href={`/collectors/new?trainingSessionId=${trainingSessionId}`}
+                                        className="mt-5 inline-flex rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                                    >
+                                        + Add Collector
+                                    </Link>
+                                )}
                             </div>
                         ) : (
                             <>
+                                {/* Desktop */}
                                 <div className="hidden max-h-[calc(100vh-420px)] overflow-y-auto overflow-x-auto overscroll-contain md:block">
                                     <table className="w-full text-left">
                                         <thead className="border-b border-gray-200 bg-gray-50">
@@ -388,9 +461,12 @@ export default async function TrainingSessionCollectorsPage({
                                                     Phone
                                                 </th>
 
-                                                <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                    Newly Recruited
-                                                </th>
+                                                {/* Hidden from RESTRICTED_READ_ONLY */}
+                                                {canViewNewlyRecruited && (
+                                                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                        Newly Recruited
+                                                    </th>
+                                                )}
                                             </tr>
                                         </thead>
 
@@ -423,19 +499,22 @@ export default async function TrainingSessionCollectorsPage({
                                                             }
                                                         </td>
 
-                                                        <td className="px-5 py-4">
-                                                            <span
-                                                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                                    "Yes"
-                                                                    ? "bg-green-50 text-green-700"
-                                                                    : "bg-gray-100 text-gray-600"
-                                                                    }`}
-                                                            >
-                                                                {
-                                                                    collector.newlyRecruited
-                                                                }
-                                                            </span>
-                                                        </td>
+                                                        {/* Hidden from RESTRICTED_READ_ONLY */}
+                                                        {canViewNewlyRecruited && (
+                                                            <td className="px-5 py-4">
+                                                                <span
+                                                                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
+                                                                            "Yes"
+                                                                            ? "bg-green-50 text-green-700"
+                                                                            : "bg-gray-100 text-gray-600"
+                                                                        }`}
+                                                                >
+                                                                    {
+                                                                        collector.newlyRecruited
+                                                                    }
+                                                                </span>
+                                                            </td>
+                                                        )}
                                                     </tr>
                                                 )
                                             )}
@@ -443,6 +522,7 @@ export default async function TrainingSessionCollectorsPage({
                                     </table>
                                 </div>
 
+                                {/* Mobile */}
                                 <div className="max-h-[calc(100vh-380px)] divide-y divide-gray-100 overflow-y-auto overscroll-contain md:hidden">
                                     {collectors.map(
                                         (collector, index) => (
@@ -471,17 +551,20 @@ export default async function TrainingSessionCollectorsPage({
                                                         </div>
                                                     </div>
 
-                                                    <span
-                                                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                            "Yes"
-                                                            ? "bg-green-50 text-green-700"
-                                                            : "bg-gray-100 text-gray-600"
-                                                            }`}
-                                                    >
-                                                        {
-                                                            collector.newlyRecruited
-                                                        }
-                                                    </span>
+                                                    {/* Hidden from RESTRICTED_READ_ONLY */}
+                                                    {canViewNewlyRecruited && (
+                                                        <span
+                                                            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
+                                                                    "Yes"
+                                                                    ? "bg-green-50 text-green-700"
+                                                                    : "bg-gray-100 text-gray-600"
+                                                                }`}
+                                                        >
+                                                            {
+                                                                collector.newlyRecruited
+                                                            }
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 <div className="mt-4 grid grid-cols-2 gap-4">

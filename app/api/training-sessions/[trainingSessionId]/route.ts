@@ -1,3 +1,5 @@
+//app/api/training-sessions/trainingSessionId/route.ts
+
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
 

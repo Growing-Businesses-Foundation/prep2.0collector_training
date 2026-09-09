@@ -1,3 +1,5 @@
+// app/api/auth/status/route.ts
+
 import { NextResponse } from "next/server";
 
 import { requireRole } from "@/lib/auth-utils";
@@ -7,6 +9,7 @@ export async function GET() {
         "ADMIN",
         "WRITE",
         "READ_ONLY",
+        "RESTRICTED_READ_ONLY",
     ]);
 
     if (error) {

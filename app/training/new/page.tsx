@@ -12,36 +12,40 @@ export default async function NewTrainingPage() {
         redirect("/login");
     }
 
-    const { role, foId, name } = session.user;
-
-    if (role === "READ_ONLY") {
-        redirect("/dashboard");
+    // Only ADMIN and WRITE users can create training sessions.
+    if (
+        session.user.role !== "ADMIN" &&
+        session.user.role !== "WRITE"
+    ) {
+        redirect("/training");
     }
 
     return (
-        <main className="min-h-screen bg-gray-100 px-4 py-8">
-            <div className="mx-auto max-w-4xl">
+        <main className="min-h-screen bg-gray-50 px-4 py-8">
+            <div className="mx-auto max-w-5xl">
+                <div className="mb-6">
+                    <BackButton label="Back to Training Sessions" />
+                </div>
+
                 <div className="mb-8">
-                    <div className="mb-4">
-                        <BackButton label="Back to Dashboard" />
-                    </div>
-                    <p className="text-sm text-gray-500">
-                        Collector Training
+                    <p className="text-xs font-semibold uppercase tracking-wider text-green-600">
+                        Training Management
                     </p>
 
-                    <h1 className="mt-1 text-2xl font-bold text-gray-900">
+                    <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
                         New Training Session
                     </h1>
 
                     <p className="mt-2 text-sm text-gray-500">
-                        Enter the training information before adding collectors.
+                        Record a new collector training session.
                     </p>
                 </div>
 
                 <TrainingForm
-                    role={role}
-                    foId={foId}
-                    foName={name || undefined}
+                    role={session.user.role}
+                    foId={session.user.foId}
+                    foName={session.user.name ?? undefined}
+                    mode="create"
                 />
             </div>
         </main>

@@ -1,3 +1,5 @@
+//app/collectors/page.tsx
+
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 
@@ -57,6 +59,21 @@ export default async function CollectorsPage({
     const toDate =
         params?.toDate?.trim() || "";
 
+    /*
+     * ------------------------------------------------------------
+     * ROLE PERMISSIONS
+     * ------------------------------------------------------------
+     */
+
+    const canViewNewlyRecruited =
+        session.user.role !==
+        "RESTRICTED_READ_ONLY";
+
+    const canManageCollectors =
+        session.user.role !== "READ_ONLY" &&
+        session.user.role !==
+        "RESTRICTED_READ_ONLY";
+
     const client =
         await clientPromise;
 
@@ -70,7 +87,7 @@ export default async function CollectorsPage({
      * TRAINING SESSION ACCESS
      * ------------------------------------------------------------
      *
-     * ADMIN / READ_ONLY:
+     * ADMIN / READ_ONLY / RESTRICTED_READ_ONLY:
      *   Can see all training sessions.
      *
      * WRITE:
@@ -198,8 +215,15 @@ export default async function CollectorsPage({
 
     /*
      * Newly recruited filter
+     *
+     * Restricted read-only users cannot use
+     * this filter, including through a manually
+     * constructed URL.
      */
-    if (recruited) {
+    if (
+        recruited &&
+        canViewNewlyRecruited
+    ) {
         collectorQuery.newlyRecruited =
             recruited;
     }
@@ -259,17 +283,29 @@ export default async function CollectorsPage({
                         collector.trainingSessionId.toString()
                     );
 
-
                 return {
                     id: collector._id.toString(),
 
-                    fullName: collector.fullName,
+                    fullName:
+                        collector.fullName,
 
-                    gender: collector.gender,
+                    gender:
+                        collector.gender,
 
-                    phoneNumber: collector.phoneNumber,
+                    phoneNumber:
+                        collector.phoneNumber,
 
-                    newlyRecruited: collector.newlyRecruited,
+                    /*
+                     * Only include newlyRecruited
+                     * for roles that are allowed
+                     * to view it.
+                     */
+                    ...(canViewNewlyRecruited
+                        ? {
+                            newlyRecruited:
+                                collector.newlyRecruited,
+                        }
+                        : {}),
 
                     trainingSessionId:
                         collector.trainingSessionId.toString(),
@@ -298,7 +334,6 @@ export default async function CollectorsPage({
                         training?.community ||
                         "—",
                 };
-
             }
         );
 
@@ -312,11 +347,13 @@ export default async function CollectorsPage({
         collectorRecords.length;
 
     const newlyRecruitedCollectors =
-        collectorRecords.filter(
-            (collector) =>
-                collector.newlyRecruited ===
-                "Yes"
-        ).length;
+        canViewNewlyRecruited
+            ? collectorRecords.filter(
+                (collector) =>
+                    collector.newlyRecruited ===
+                    "Yes"
+            ).length
+            : 0;
 
     const maleCollectors =
         collectorRecords.filter(
@@ -385,6 +422,7 @@ export default async function CollectorsPage({
             role={session.user.role}
         >
             <DashboardAutoRefresh />
+
             <div className="px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto max-w-7xl">
 
@@ -405,15 +443,14 @@ export default async function CollectorsPage({
                             </p>
                         </div>
 
-                        {session.user.role !==
-                            "READ_ONLY" && (
-                                <a
-                                    href="/collectors/new"
-                                    className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
-                                >
-                                    + Add Collector
-                                </a>
-                            )}
+                        {canManageCollectors && (
+                            <a
+                                href="/collectors/new"
+                                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
+                            >
+                                + Add Collector
+                            </a>
+                        )}
                     </div>
 
                     {/* Filters */}
@@ -425,11 +462,15 @@ export default async function CollectorsPage({
                         clusters={
                             clusters
                         }
+                        role={
+                            session.user.role
+                        }
                     />
 
                     {/* Summary */}
                     <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 
+                        {/* Total Collectors */}
                         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                             <p className="text-sm font-medium text-gray-500">
                                 Total Collectors
@@ -442,6 +483,7 @@ export default async function CollectorsPage({
                             </p>
                         </div>
 
+                        {/* Female */}
                         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                             <p className="text-sm font-medium text-gray-500">
                                 Female
@@ -454,6 +496,7 @@ export default async function CollectorsPage({
                             </p>
                         </div>
 
+                        {/* Male */}
                         <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
                             <p className="text-sm font-medium text-gray-500">
                                 Male
@@ -466,17 +509,20 @@ export default async function CollectorsPage({
                             </p>
                         </div>
 
-                        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                            <p className="text-sm font-medium text-gray-500">
-                                Newly Recruited
-                            </p>
+                        {/* Newly Recruited */}
+                        {canViewNewlyRecruited && (
+                            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                                <p className="text-sm font-medium text-gray-500">
+                                    Newly Recruited
+                                </p>
 
-                            <p className="mt-2 text-3xl font-bold text-gray-900">
-                                {
-                                    newlyRecruitedCollectors
-                                }
-                            </p>
-                        </div>
+                                <p className="mt-2 text-3xl font-bold text-gray-900">
+                                    {
+                                        newlyRecruitedCollectors
+                                    }
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Collector Table */}
@@ -495,15 +541,14 @@ export default async function CollectorsPage({
                                     new collector.
                                 </p>
 
-                                {session.user.role !==
-                                    "READ_ONLY" && (
-                                        <a
-                                            href="/collectors/new"
-                                            className="mt-5 inline-flex rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
-                                        >
-                                            Add Collector
-                                        </a>
-                                    )}
+                                {canManageCollectors && (
+                                    <a
+                                        href="/collectors/new"
+                                        className="mt-5 inline-flex rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800"
+                                    >
+                                        Add Collector
+                                    </a>
+                                )}
                             </div>
                         ) : (
                             <>
@@ -524,9 +569,11 @@ export default async function CollectorsPage({
                                                     Phone
                                                 </th>
 
-                                                <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                    Newly Recruited
-                                                </th>
+                                                {canViewNewlyRecruited && (
+                                                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                        Newly Recruited
+                                                    </th>
+                                                )}
 
                                                 <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
                                                     FO ID
@@ -553,10 +600,11 @@ export default async function CollectorsPage({
                                                         }
                                                         className="transition hover:bg-gray-50"
                                                     >
-
                                                         <td className="px-5 py-4">
                                                             <p className="text-sm font-semibold text-gray-900">
-                                                                {collector.fullName}
+                                                                {
+                                                                    collector.fullName
+                                                                }
                                                             </p>
 
                                                             <div className="mt-1 space-y-0.5">
@@ -565,11 +613,14 @@ export default async function CollectorsPage({
                                                                     {collector.trainingDate
                                                                         ? new Date(
                                                                             collector.trainingDate
-                                                                        ).toLocaleDateString("en-NG", {
-                                                                            day: "2-digit",
-                                                                            month: "short",
-                                                                            year: "numeric",
-                                                                        })
+                                                                        ).toLocaleDateString(
+                                                                            "en-NG",
+                                                                            {
+                                                                                day: "2-digit",
+                                                                                month: "short",
+                                                                                year: "numeric",
+                                                                            }
+                                                                        )
                                                                         : "—"}
                                                                 </p>
 
@@ -578,16 +629,18 @@ export default async function CollectorsPage({
                                                                     {collector.addedToSystem
                                                                         ? new Date(
                                                                             collector.addedToSystem
-                                                                        ).toLocaleDateString("en-NG", {
-                                                                            day: "2-digit",
-                                                                            month: "short",
-                                                                            year: "numeric",
-                                                                        })
+                                                                        ).toLocaleDateString(
+                                                                            "en-NG",
+                                                                            {
+                                                                                day: "2-digit",
+                                                                                month: "short",
+                                                                                year: "numeric",
+                                                                            }
+                                                                        )
                                                                         : "—"}
                                                                 </p>
                                                             </div>
                                                         </td>
-
 
                                                         <td className="px-5 py-4 text-sm text-gray-700">
                                                             {
@@ -601,19 +654,21 @@ export default async function CollectorsPage({
                                                             }
                                                         </td>
 
-                                                        <td className="px-5 py-4">
-                                                            <span
-                                                                className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                                    "Yes"
-                                                                    ? "bg-green-50 text-green-700"
-                                                                    : "bg-gray-100 text-gray-600"
-                                                                    }`}
-                                                            >
-                                                                {
-                                                                    collector.newlyRecruited
-                                                                }
-                                                            </span>
-                                                        </td>
+                                                        {canViewNewlyRecruited && (
+                                                            <td className="px-5 py-4">
+                                                                <span
+                                                                    className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium 
+                                                                        ${collector.newlyRecruited === "Yes"
+                                                                            ? "bg-green-50 text-green-700"
+                                                                            : "bg-gray-100 text-gray-600"
+                                                                        } `}
+                                                                >
+                                                                    {
+                                                                        collector.newlyRecruited
+                                                                    }
+                                                                </span>
+                                                            </td>
+                                                        )}
 
                                                         <td className="px-5 py-4 text-sm font-semibold text-gray-900">
                                                             {
@@ -674,17 +729,19 @@ export default async function CollectorsPage({
                                                         </p>
                                                     </div>
 
-                                                    <span
-                                                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                            "Yes"
-                                                            ? "bg-green-50 text-green-700"
-                                                            : "bg-gray-100 text-gray-600"
-                                                            }`}
-                                                    >
-                                                        {
-                                                            collector.newlyRecruited
-                                                        }
-                                                    </span>
+                                                    {canViewNewlyRecruited && (
+                                                        <span
+                                                            className={`shrink - 0 rounded - full px - 2.5 py - 1 text - xs font - medium ${collector.newlyRecruited ===
+                                                                    "Yes"
+                                                                    ? "bg-green-50 text-green-700"
+                                                                    : "bg-gray-100 text-gray-600"
+                                                                } `}
+                                                        >
+                                                            {
+                                                                collector.newlyRecruited
+                                                            }
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 <div className="mt-4 grid grid-cols-2 gap-4">
@@ -737,7 +794,6 @@ export default async function CollectorsPage({
                                                     </div>
                                                 </div>
 
-
                                                 <div className="mt-4 space-y-1">
                                                     <p className="text-xs text-gray-500">
                                                         Training date:{" "}
@@ -771,7 +827,6 @@ export default async function CollectorsPage({
                                                             : "—"}
                                                     </p>
                                                 </div>
-
                                             </div>
                                         )
                                     )}

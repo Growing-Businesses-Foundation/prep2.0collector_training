@@ -1,3 +1,4 @@
+//app/training/[trainingSessionId]/edit/page.tsx
 import { notFound, redirect } from "next/navigation";
 import { ObjectId } from "mongodb";
 
@@ -26,9 +27,21 @@ export default async function EditTrainingPage({
     }
 
     /*
-     * READ_ONLY users cannot edit training sessions.
+     * Only ADMIN and WRITE users can edit training sessions.
+     *
+     * READ_ONLY:
+     * - Can view
+     * - Cannot edit
+     *
+     * RESTRICTED_READ_ONLY:
+     * - Can view
+     * - Cannot edit
+     * - Newly recruited data is restricted
      */
-    if (session.user.role === "READ_ONLY") {
+    if (
+        session.user.role !== "ADMIN" &&
+        session.user.role !== "WRITE"
+    ) {
         redirect("/training");
     }
 
@@ -62,8 +75,7 @@ export default async function EditTrainingPage({
      */
     if (
         session.user.role === "WRITE" &&
-        trainingSession.fieldOfficerId !==
-        session.user.foId
+        trainingSession.fieldOfficerId !== session.user.foId
     ) {
         redirect("/training");
     }
@@ -71,10 +83,12 @@ export default async function EditTrainingPage({
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6 lg:px-8">
+
                 {/* Back */}
                 <div className="mb-6">
                     <BackButton label="Back to Training Sessions" />
                 </div>
+
                 {/* Page header */}
                 <div className="mb-6">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -115,34 +129,43 @@ export default async function EditTrainingPage({
                     initialData={{
                         trainingDate:
                             trainingSession.trainingDate || "",
+
                         fieldOfficerId:
                             trainingSession.fieldOfficerId || "",
+
                         fieldOfficerName:
-                            trainingSession.fieldOfficerName ||
-                            "",
+                            trainingSession.fieldOfficerName || "",
+
                         clusterName:
                             trainingSession.clusterName || "",
+
                         lga:
                             trainingSession.lga || "",
+
                         community:
                             trainingSession.community || "",
+
                         venue:
                             trainingSession.venue || "",
+
                         facilitator:
                             trainingSession.facilitator || "",
+
                         expectedCollectors:
                             Number(
-                                trainingSession.expectedCollectors ||
-                                0
+                                trainingSession.expectedCollectors || 0
                             ),
+
                         latitude:
                             Number(
                                 trainingSession.latitude || 0
                             ),
+
                         longitude:
                             Number(
                                 trainingSession.longitude || 0
                             ),
+
                         photoUrl:
                             trainingSession.photoUrl || null,
                     }}

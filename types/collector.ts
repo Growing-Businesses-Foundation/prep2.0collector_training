@@ -1,3 +1,7 @@
+// types/collectors.ts
+
+import type { UserRole } from "@/lib/models/user";
+
 export interface CollectorFormProps {
-    role: "ADMIN" | "WRITE";
+    role: UserRole;
 }

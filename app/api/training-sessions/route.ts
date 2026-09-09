@@ -1,3 +1,5 @@
+//app/api/training-sessions/route.ts
+
 import { NextResponse } from "next/server";
 
 import clientPromise from "@/lib/mongodb";
@@ -9,6 +11,7 @@ export async function POST(request: Request) {
     const { user, error } = await requireRole([
         "ADMIN",
         "WRITE",
+        "RESTRICTED_READ_ONLY",
     ]);
 
     if (error) {

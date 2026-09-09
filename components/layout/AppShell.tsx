@@ -3,10 +3,11 @@
 import { ReactNode, useState } from "react";
 import Sidebar from "./Sidebar";
 import SessionTimeout from "@/components/auth/SessionTimeout";
+import type { UserRole } from "@/lib/models/user";
 
 interface AppShellProps {
     children: ReactNode;
-    role: "ADMIN" | "WRITE" | "READ_ONLY";
+    role: UserRole;
 }
 
 export default function AppShell({
@@ -18,6 +19,7 @@ export default function AppShell({
     return (
         <div className="h-screen overflow-hidden bg-gray-100">
             <SessionTimeout />
+
             <div className="flex h-screen">
                 <Sidebar
                     role={role}

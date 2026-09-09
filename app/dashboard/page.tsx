@@ -45,10 +45,14 @@ export default async function DashboardPage() {
                     {/* Statistics */}
                     <DashboardStats
                         stats={dashboardData.stats}
+                        role={session.user.role}
                     />
 
                     <DashboardActions
-                        canWrite={session.user.role !== "READ_ONLY"}
+                        canWrite={
+                            session.user.role === "ADMIN" ||
+                            session.user.role === "WRITE"
+                        }
                     />
 
                     {/* Recent Trainings */}

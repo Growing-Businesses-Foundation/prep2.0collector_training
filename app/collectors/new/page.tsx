@@ -12,7 +12,11 @@ export default async function NewCollectorPage() {
         redirect("/login");
     }
 
-    if (session.user.role === "READ_ONLY") {
+    // Only ADMIN and WRITE users can create collectors.
+    if (
+        session.user.role !== "ADMIN" &&
+        session.user.role !== "WRITE"
+    ) {
         redirect("/dashboard");
     }
 
@@ -23,6 +27,7 @@ export default async function NewCollectorPage() {
                     <div className="mb-4">
                         <BackButton label="Back to Dashboard" />
                     </div>
+
                     <p className="text-sm text-gray-500">
                         Collector Training
                     </p>

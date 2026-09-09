@@ -1,4 +1,5 @@
 import clientPromise from "@/lib/mongodb";
+import type { UserRole } from "./models/user";
 
 interface TrainingSession {
     _id: {
@@ -17,25 +18,49 @@ interface TrainingSession {
 interface TrainingSessionWithStatus extends TrainingSession {
     expectedCollectors: number;
     recordedCollectors: number;
-    trainingStatus: "Not Started" | "In Progress" | "Completed";
+    trainingStatus:
+    | "Not Started"
+    | "In Progress"
+    | "Completed";
 }
 
 export async function getDashboardData(
-    role: "ADMIN" | "WRITE" | "READ_ONLY",
+    role: UserRole,
     foId?: string
 ) {
     const client = await clientPromise;
     const db = client.db(process.env.MONGODB_DB);
 
     const isAdmin = role === "ADMIN";
-    const isReadOnly = role === "READ_ONLY";
+    const isWrite = role === "WRITE";
+    const isReadOnly =
+        role === "READ_ONLY" ||
+        role === "RESTRICTED_READ_ONLY";
 
-    // WRITE users only see their own FO data.
-    // ADMIN and READ_ONLY users see everything.
+    // --------------------------------------------------
+    // DATA VISIBILITY
+    // --------------------------------------------------
+    //
+    // ADMIN:
+    //   See all data
+    //
+    // WRITE:
+    //   See only their own FO data
+    //
+    // READ_ONLY:
+    //   See all data
+    //
+    // RESTRICTED_READ_ONLY:
+    //   See all data, but newly recruited data is hidden
+    //
+    // --------------------------------------------------
+
     const sessionQuery =
         isAdmin || isReadOnly
             ? {}
-            : { fieldOfficerId: foId };
+            : isWrite
+                ? { fieldOfficerId: foId }
+                : {};
 
     // --------------------------------------------------
     // TRAINING SESSIONS
@@ -142,7 +167,6 @@ export async function getDashboardData(
     const totalTrainingSessions =
         sessionsWithStatus.length;
 
-
     const totalExpectedCollectors =
         sessionsWithStatus.reduce(
             (total, training) =>
@@ -151,29 +175,51 @@ export async function getDashboardData(
         );
 
     // --------------------------------------------------
-    // COLLECTOR STATISTICS
+    // COLLECTOR QUERY
     // --------------------------------------------------
 
     const collectorQuery =
         isAdmin || isReadOnly
             ? {}
-            : {
-                trainingSessionId: {
-                    $in: trainingSessionIds,
-                },
-            };
+            : isWrite
+                ? {
+                    trainingSessionId: {
+                        $in: trainingSessionIds,
+                    },
+                }
+                : {};
+
+    // --------------------------------------------------
+    // COLLECTOR STATISTICS
+    // --------------------------------------------------
 
     const totalCollectors = await db
         .collection("collectors")
         .countDocuments(collectorQuery);
 
+    // --------------------------------------------------
+    // NEWLY RECRUITED
+    // --------------------------------------------------
+    //
+    // Restricted read-only users must NOT see this data.
+    //
+    // Instead of exposing the real number, return 0.
+    //
+    // --------------------------------------------------
+
     const totalNewlyRecruitedCollectors =
-        await db
-            .collection("collectors")
-            .countDocuments({
-                ...collectorQuery,
-                newlyRecruited: "Yes",
-            });
+        role === "RESTRICTED_READ_ONLY"
+            ? 0
+            : await db
+                .collection("collectors")
+                .countDocuments({
+                    ...collectorQuery,
+                    newlyRecruited: "Yes",
+                });
+
+    // --------------------------------------------------
+    // GENDER STATISTICS
+    // --------------------------------------------------
 
     const maleCollectors = await db
         .collection("collectors")
@@ -195,7 +241,8 @@ export async function getDashboardData(
 
     const completionRate =
         totalExpectedCollectors > 0
-            ? (totalCollectors / totalExpectedCollectors) *
+            ? (totalCollectors /
+                totalExpectedCollectors) *
             100
             : 0;
 
@@ -207,20 +254,29 @@ export async function getDashboardData(
         .slice(0, 10)
         .map((training) => ({
             id: training._id.toString(),
+
             trainingDate: new Date(
                 training.trainingDate
             ).toISOString(),
+
             fieldOfficerId:
                 training.fieldOfficerId || "",
+
             clusterName:
                 training.clusterName || "",
-            lga: training.lga || "",
+
+            lga:
+                training.lga || "",
+
             community:
                 training.community || "",
+
             expectedCollectors:
                 training.expectedCollectors,
+
             recordedCollectors:
                 training.recordedCollectors,
+
             trainingStatus:
                 training.trainingStatus,
         }));
@@ -232,11 +288,17 @@ export async function getDashboardData(
     return {
         stats: {
             totalTrainingSessions,
+
             totalExpectedCollectors,
+
             totalCollectors,
+
             totalNewlyRecruitedCollectors,
+
             maleCollectors,
+
             femaleCollectors,
+
             completionRate: Number(
                 completionRate.toFixed(1)
             ),

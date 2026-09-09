@@ -1,12 +1,12 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
+import type { UserRole } from "@/lib/models/user";
 
 interface SidebarProps {
-    role: "ADMIN" | "WRITE" | "READ_ONLY";
+    role: UserRole;
     mobileOpen: boolean;
     onClose: () => void;
 }
@@ -152,7 +152,6 @@ function KeyIcon() {
     );
 }
 
-
 function LogOutIcon() {
     return (
         <svg
@@ -246,10 +245,10 @@ function NavItem({
         <Link
             href={href}
             onClick={onClick}
-            className={`group relative flex items-center gap-3 rounded-xl px-3  text-sm font-medium transition-all duration-200 ${active
-                ? "bg-green-50 text-green-700 shadow-sm"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                } `}
+            className={`group relative flex items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all duration-200 ${active
+                    ? "bg-green-50 text-green-700 shadow-sm"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
         >
             {active && (
                 <span className="absolute left-0 top-1/2 h-7 w-1 -translate-y-1/2 rounded-r-full bg-green-600" />
@@ -257,9 +256,9 @@ function NavItem({
 
             <span
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition ${active
-                    ? "bg-green-600 text-white shadow-md shadow-green-600/20"
-                    : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
-                    } `}
+                        ? "bg-green-600 text-white shadow-md shadow-green-600/20"
+                        : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
+                    }`}
             >
                 {icon}
             </span>
@@ -269,9 +268,9 @@ function NavItem({
             {badge && (
                 <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${active
-                        ? "bg-green-100 text-green-700"
-                        : "bg-gray-100 text-gray-500"
-                        } `}
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
                 >
                     {badge}
                 </span>
@@ -295,7 +294,27 @@ export default function Sidebar({
         onClose();
     };
 
-    const roleLabel = role.replace("_", " ");
+    /*
+     * Only ADMIN and WRITE users can create/manage
+     * training sessions and collectors.
+     *
+     * This explicit check is intentional.
+     *
+     * Do NOT use:
+     * role !== "READ_ONLY"
+     *
+     * because that would incorrectly grant access to
+     * RESTRICTED_READ_ONLY users.
+     */
+    const canManageTraining =
+        role === "ADMIN" ||
+        role === "WRITE";
+
+    const canManageCollectors =
+        role === "ADMIN" ||
+        role === "WRITE";
+
+    const roleLabel = role.replaceAll("_", " ");
 
     return (
         <>
@@ -312,13 +331,12 @@ export default function Sidebar({
             {/* Sidebar */}
             <aside
                 className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-gray-200 bg-white shadow-xl shadow-gray-900/5 transition-transform duration-300 ease-out lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${mobileOpen
-                    ? "translate-x-0"
-                    : "-translate-x-full"
+                        ? "translate-x-0"
+                        : "-translate-x-full"
                     }`}
             >
                 {/* Brand */}
                 <div className="relative border-b border-gray-100 px-5 py-5">
-                    {/* Top brand accent */}
                     <div className="absolute left-0 right-0 top-0 h-1 bg-linear-to-r from-green-700 via-green-500 to-orange-400" />
 
                     <div className="flex items-center justify-between">
@@ -394,7 +412,7 @@ export default function Sidebar({
                             onClick={handleNavigation}
                         />
 
-                        {role !== "READ_ONLY" && (
+                        {canManageTraining && (
                             <NavItem
                                 href="/training/new"
                                 label="New Training"
@@ -419,7 +437,7 @@ export default function Sidebar({
                             onClick={handleNavigation}
                         />
 
-                        {role !== "READ_ONLY" && (
+                        {canManageCollectors && (
                             <NavItem
                                 href="/collectors/new"
                                 label="Add Collector"
@@ -453,7 +471,7 @@ export default function Sidebar({
                             <span className="h-2 w-2 rounded-full bg-green-500 shadow-sm shadow-green-500/50" />
                         </div>
                     </div>
-                    
+
                     {/* Change Password */}
                     <Link
                         href="/account/change-password"
