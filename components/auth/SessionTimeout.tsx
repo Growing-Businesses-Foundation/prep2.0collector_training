@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
 
-const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes in milliseconds
+const IDLE_TIMEOUT = 5 * 60 * 1000; // 30 minutes in milliseconds
 
 const ACTIVITY_EVENTS = [
     "mousedown",
