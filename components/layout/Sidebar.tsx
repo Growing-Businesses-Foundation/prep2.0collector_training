@@ -246,7 +246,7 @@ function NavItem({
         <Link
             href={href}
             onClick={onClick}
-            className={`group relative flex items - center gap - 3 rounded - xl px - 3 py - 3 text - sm font - medium transition - all duration - 200 ${active
+            className={`group relative flex items-center gap-3 rounded-xl px-3  text-sm font-medium transition-all duration-200 ${active
                 ? "bg-green-50 text-green-700 shadow-sm"
                 : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 } `}
@@ -256,7 +256,7 @@ function NavItem({
             )}
 
             <span
-                className={`flex h - 9 w - 9 shrink - 0 items - center justify - center rounded - lg transition ${active
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition ${active
                     ? "bg-green-600 text-white shadow-md shadow-green-600/20"
                     : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
                     } `}
@@ -268,7 +268,7 @@ function NavItem({
 
             {badge && (
                 <span
-                    className={`rounded - full px - 2 py - 0.5 text - [10px] font - semibold ${active
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${active
                         ? "bg-green-100 text-green-700"
                         : "bg-gray-100 text-gray-500"
                         } `}
