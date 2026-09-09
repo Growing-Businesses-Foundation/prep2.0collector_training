@@ -10,6 +10,8 @@ import AppShell from "@/components/layout/AppShell";
 import TrainingFilters from "@/components/training/TrainingFilters";
 import clientPromise from "@/lib/mongodb";
 import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh";
+import TrainingExportButton from "@/components/training/TrainingExportButton";
+
 
 interface TrainingSessionsPageProps {
     searchParams?: Promise<{
@@ -371,17 +373,31 @@ export default async function TrainingSessionsPage({
                             </p>
                         </div>
 
-                        {(
-                            session.user.role === "ADMIN" ||
-                            session.user.role === "WRITE"
-                        ) && (
-                                <Link
-                                    href="/training/new"
-                                    className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
-                                >
-                                    + New Training
-                                </Link>
-                            )}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            {session.user.role !== "RESTRICTED_READ_ONLY" && (
+                                <TrainingExportButton
+                                    search={search}
+                                    fieldOfficer={fieldOfficer}
+                                    lga={lga}
+                                    status={status}
+                                    fromDate={fromDate}
+                                    toDate={toDate}
+                                />
+                            )}                        
+
+
+                            {(
+                                session.user.role === "ADMIN" ||
+                                session.user.role === "WRITE"
+                            ) && (
+                                    <Link
+                                        href="/training/new"
+                                        className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
+                                    >
+                                        + New Training
+                                    </Link>
+                                )}
+                        </div>
                     </div>
 
                     {/* Filters */}

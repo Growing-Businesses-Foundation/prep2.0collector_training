@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import AppShell from "@/components/layout/AppShell";
 import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh";
+import CollectorExportButton from "@/components/collectors/CollectorExportButton";
 import CollectorFilters from "@/components/collectors/CollectorFilters";
 import clientPromise from "@/lib/mongodb";
 
@@ -443,14 +444,32 @@ export default async function CollectorsPage({
                             </p>
                         </div>
 
-                        {canManageCollectors && (
-                            <a
-                                href="/collectors/new"
-                                className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
-                            >
-                                + Add Collector
-                            </a>
-                        )}
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            {session.user.role !==
+                                "RESTRICTED_READ_ONLY" && (
+                                    <CollectorExportButton
+                                        search={search}
+                                        gender={gender}
+                                        recruited={recruited}
+                                        fieldOfficer={
+                                            fieldOfficer
+                                        }
+                                        lga={lga}
+                                        cluster={cluster}
+                                        fromDate={fromDate}
+                                        toDate={toDate}
+                                    />
+                                )}
+
+                            {canManageCollectors && (
+                                <a
+                                    href="/collectors/new"
+                                    className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800"
+                                >
+                                    + Add Collector
+                                </a>
+                            )}
+                        </div>
                     </div>
 
                     {/* Filters */}
@@ -732,9 +751,9 @@ export default async function CollectorsPage({
                                                     {canViewNewlyRecruited && (
                                                         <span
                                                             className={`shrink - 0 rounded - full px - 2.5 py - 1 text - xs font - medium ${collector.newlyRecruited ===
-                                                                    "Yes"
-                                                                    ? "bg-green-50 text-green-700"
-                                                                    : "bg-gray-100 text-gray-600"
+                                                                "Yes"
+                                                                ? "bg-green-50 text-green-700"
+                                                                : "bg-gray-100 text-gray-600"
                                                                 } `}
                                                         >
                                                             {
