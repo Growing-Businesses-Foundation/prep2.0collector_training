@@ -962,7 +962,7 @@ export default function TrainingForm({
                                         .value
                                 )
                             }
-                            placeholder="e.g. Cluster 1"
+                            placeholder="e.g. FO 1 C1"
                         />
 
                         <InputField
