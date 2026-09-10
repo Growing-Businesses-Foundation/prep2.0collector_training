@@ -1,4 +1,4 @@
-//app/api/training-sessions/trainingSessionId/route.ts
+// app/api/training-sessions/[trainingSessionId]/route.ts
 
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
@@ -88,8 +88,8 @@ export async function PUT(
             ?.toString()
             .trim();
 
-        const clusterName = formData
-            .get("clusterName")
+        const clusterNumber = formData
+            .get("clusterNumber")
             ?.toString()
             .trim();
 
@@ -135,7 +135,7 @@ export async function PUT(
          */
         if (
             !trainingDate ||
-            !clusterName ||
+            !clusterNumber ||
             !lga ||
             !community ||
             !venue ||
@@ -149,6 +149,30 @@ export async function PUT(
                     success: false,
                     message:
                         "All training information fields are required.",
+                },
+                { status: 400 }
+            );
+        }
+
+        /*
+         * Normalize and validate the Cluster Number.
+         *
+         * Examples:
+         * C1   -> C1
+         * c1   -> C1
+         * C 1  -> C1
+         */
+        const normalizedClusterNumber =
+            clusterNumber
+                .replace(/\s+/g, "")
+                .toUpperCase();
+
+        if (!/^C\d+$/.test(normalizedClusterNumber)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Cluster number must be in the format C1, C2, C3, etc.",
                 },
                 { status: 400 }
             );
@@ -180,7 +204,8 @@ export async function PUT(
                 );
             }
 
-            assignedFieldOfficerId = String(user.foId).trim();
+            assignedFieldOfficerId =
+                String(user.foId).trim();
 
             fieldOfficerName =
                 user.name || "Field Officer";
@@ -196,7 +221,8 @@ export async function PUT(
                 );
             }
 
-            assignedFieldOfficerId = fieldOfficerId;
+            assignedFieldOfficerId =
+                fieldOfficerId.trim();
 
             /*
              * If the ADMIN is keeping the same Field Officer
@@ -222,9 +248,10 @@ export async function PUT(
                  */
                 const fieldOfficer =
                     await db
-                        .collection("field_officers")
+                        .collection("users")
                         .findOne({
                             foId: assignedFieldOfficerId,
+                            role: "WRITE",
                             isActive: true,
                         });
 
@@ -243,6 +270,44 @@ export async function PUT(
                     fieldOfficer.name;
             }
         }
+
+        /*
+         * ====================================================
+         * DUPLICATE CLUSTER VALIDATION
+         * ====================================================
+         *
+         * A training cluster is uniquely identified by:
+         *
+         * Field Officer ID + Cluster Number
+         *
+         * Exclude the current training session so that editing
+         * an existing session without changing its cluster is
+         * allowed.
+         */
+        const duplicateCluster =
+            await db
+                .collection("training_sessions")
+                .findOne({
+                    _id: { $ne: sessionId },
+                    fieldOfficerId:
+                        assignedFieldOfficerId,
+                    clusterNumber:
+                        normalizedClusterNumber,
+                });
+
+        if (duplicateCluster) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "This cluster already exists.",
+                },
+                { status: 409 }
+            );
+        }
+
+        const clusterName =
+            `${assignedFieldOfficerId}, ${normalizedClusterNumber}`;
 
         /*
          * Validate expected collectors.
@@ -269,8 +334,11 @@ export async function PUT(
         /*
          * Validate coordinates.
          */
-        const latitudeNumber = Number(latitude);
-        const longitudeNumber = Number(longitude);
+        const latitudeNumber =
+            Number(latitude);
+
+        const longitudeNumber =
+            Number(longitude);
 
         if (
             !Number.isFinite(latitudeNumber) ||
@@ -386,7 +454,9 @@ export async function PUT(
                 );
             }
 
-            photoFileId = uploadedPhoto.id;
+            photoFileId =
+                uploadedPhoto.id;
+
             photoUrl =
                 uploadedPhoto.webViewLink ||
                 null;
@@ -401,22 +471,34 @@ export async function PUT(
                 {
                     $set: {
                         trainingDate,
+
                         fieldOfficerId:
                             assignedFieldOfficerId,
+
                         fieldOfficerName,
+
+                        clusterNumber:
+                            normalizedClusterNumber,
+
                         clusterName,
+
                         lga,
                         community,
                         venue,
                         facilitator,
+
                         expectedCollectors:
                             expectedCollectorsNumber,
+
                         latitude:
                             latitudeNumber,
+
                         longitude:
                             longitudeNumber,
+
                         photoFileId,
                         photoUrl,
+
                         updatedAt: now,
                     },
                 }
@@ -424,28 +506,46 @@ export async function PUT(
 
         await logActivity({
             userId: user.id,
+
             userName:
                 user.name ?? undefined,
+
             userEmail:
                 user.email ?? undefined,
-            action: "TRAINING_UPDATED",
-            resource: "training_session",
+
+            action:
+                "TRAINING_UPDATED",
+
+            resource:
+                "training_session",
+
             resourceId:
                 trainingSessionId,
+
             description:
                 `Updated training session for ${fieldOfficerName} - ${clusterName}`,
+
             metadata: {
                 trainingDate,
+
                 fieldOfficerId:
                     assignedFieldOfficerId,
+
                 fieldOfficerName,
+
+                clusterNumber:
+                    normalizedClusterNumber,
+
                 clusterName,
+
                 lga,
                 community,
                 venue,
                 facilitator,
+
                 expectedCollectors:
                     expectedCollectorsNumber,
+
                 photoReplaced:
                     photo instanceof File,
             },
@@ -453,8 +553,10 @@ export async function PUT(
 
         return NextResponse.json({
             success: true,
+
             message:
                 "Training session updated successfully.",
+
             trainingSessionId,
         });
     } catch (error) {
@@ -462,6 +564,22 @@ export async function PUT(
             "[TRAINING] Training session update error:",
             error
         );
+
+        if (
+            error &&
+            typeof error === "object" &&
+            "code" in error &&
+            error.code === 11000
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "This cluster already exists.",
+                },
+                { status: 409 }
+            );
+        }
 
         return NextResponse.json(
             {

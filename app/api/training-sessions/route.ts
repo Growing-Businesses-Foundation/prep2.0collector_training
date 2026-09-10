@@ -11,7 +11,6 @@ export async function POST(request: Request) {
     const { user, error } = await requireRole([
         "ADMIN",
         "WRITE",
-        "RESTRICTED_READ_ONLY",
     ]);
 
     if (error) {
@@ -21,14 +20,20 @@ export async function POST(request: Request) {
     try {
         const formData = await request.formData();
 
+        const client = await clientPromise;
+
+        const db = client.db(
+            process.env.MONGODB_DB
+        );
+
         const trainingDate =
             formData.get("trainingDate")?.toString().trim();
 
         const fieldOfficerId =
             formData.get("fieldOfficerId")?.toString().trim();
 
-        const clusterName =
-            formData.get("clusterName")?.toString().trim();
+        const clusterNumber =
+            formData.get("clusterNumber")?.toString().trim();
 
         const lga =
             formData.get("lga")?.toString().trim();
@@ -67,8 +72,6 @@ export async function POST(request: Request) {
             /*
              * WRITE users are already authenticated and their
              * Field Officer ID is stored in the session.
-             *
-             * Do not query field_officers just to validate them.
              */
 
             if (!user.foId) {
@@ -91,7 +94,7 @@ export async function POST(request: Request) {
             /*
              * ADMIN users can select a Field Officer.
              * Validate the selected Field Officer against
-             * the field_officers collection.
+             * the users collection.
              */
 
             if (!fieldOfficerId) {
@@ -108,18 +111,12 @@ export async function POST(request: Request) {
             assignedFieldOfficerId =
                 fieldOfficerId.trim();
 
-            const client = await clientPromise;
-
-            const db = client.db(
-                process.env.MONGODB_DB
-            );
-
             const fieldOfficer =
                 await db
-                    .collection("field_officers")
+                    .collection("users")
                     .findOne({
-                        foId:
-                            assignedFieldOfficerId,
+                        foId: assignedFieldOfficerId,
+                        role: "WRITE",
                         isActive: true,
                     });
 
@@ -145,7 +142,7 @@ export async function POST(request: Request) {
         if (
             !trainingDate ||
             !assignedFieldOfficerId ||
-            !clusterName ||
+            !clusterNumber ||
             !lga ||
             !community ||
             !venue ||
@@ -163,6 +160,55 @@ export async function POST(request: Request) {
                 { status: 400 }
             );
         }
+
+        // ====================================================
+        // CLUSTER NUMBER VALIDATION
+        // ====================================================
+
+        const normalizedClusterNumber =
+            clusterNumber
+                .replace(/\s+/g, "")
+                .toUpperCase();
+
+        if (!/^C\d+$/.test(normalizedClusterNumber)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Cluster number must be in the format C1, C2, C3, etc.",
+                },
+                { status: 400 }
+            );
+        }
+
+        // ====================================================
+        // DUPLICATE CLUSTER VALIDATION
+        // ====================================================
+
+        const existingCluster =
+            await db
+                .collection("training_sessions")
+                .findOne({
+                    fieldOfficerId:
+                        assignedFieldOfficerId,
+                    clusterNumber:
+                        normalizedClusterNumber,
+                });
+
+        if (existingCluster) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "This cluster already exists.",
+                },
+                { status: 409 }
+            );
+        }
+
+        // Canonical cluster name
+        const clusterName =
+            `${assignedFieldOfficerId}, ${normalizedClusterNumber}`;
 
         // ====================================================
         // EXPECTED COLLECTORS
@@ -265,27 +311,16 @@ export async function POST(request: Request) {
             );
         }
 
-
         if (photo.size > 3 * 1024 * 1024) {
             return NextResponse.json(
                 {
                     success: false,
-                    message: "Training photo must be less than 3MB.",
+                    message:
+                        "Training photo must be less than 3MB.",
                 },
                 { status: 400 }
             );
         }
-
-
-        // ====================================================
-        // DATABASE
-        // ====================================================
-
-        const client = await clientPromise;
-
-        const db = client.db(
-            process.env.MONGODB_DB
-        );
 
         // ====================================================
         // GOOGLE DRIVE UPLOAD
@@ -301,11 +336,10 @@ export async function POST(request: Request) {
                 .replace(/^-|-$/g, "");
 
         const safePhotoName =
-            photo.name
-                .replace(
-                    /[^a-zA-Z0-9._-]+/g,
-                    "-"
-                );
+            photo.name.replace(
+                /[^a-zA-Z0-9._-]+/g,
+                "-"
+            );
 
         const fileName =
             `training-${trainingDate}-${safeFieldOfficerName}-${Date.now()}-${safePhotoName}`;
@@ -341,7 +375,11 @@ export async function POST(request: Request) {
                     fieldOfficerName:
                         fieldOfficerName,
 
+                    clusterNumber:
+                        normalizedClusterNumber,
+
                     clusterName,
+
                     lga,
                     community,
                     venue,
@@ -376,8 +414,10 @@ export async function POST(request: Request) {
 
         await logActivity({
             userId: user.id,
+
             userName:
                 user.name ?? undefined,
+
             userEmail:
                 user.email ?? undefined,
 
@@ -391,7 +431,7 @@ export async function POST(request: Request) {
                 result.insertedId.toString(),
 
             description:
-                `Created training session for ${fieldOfficerName} - ${clusterName}`,
+                `Created training session for ${fieldOfficerName} - ${normalizedClusterNumber}`,
 
             metadata: {
                 trainingDate,
@@ -401,7 +441,11 @@ export async function POST(request: Request) {
 
                 fieldOfficerName,
 
+                clusterNumber:
+                    normalizedClusterNumber,
+
                 clusterName,
+
                 lga,
                 community,
                 venue,
@@ -424,11 +468,28 @@ export async function POST(request: Request) {
             photoFileId:
                 uploadedPhoto.id,
         });
+
     } catch (error) {
         console.error(
             "[TRAINING] Training session creation error:",
             error
         );
+
+        if (
+            error &&
+            typeof error === "object" &&
+            "code" in error &&
+            error.code === 11000
+        ) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "This cluster already exists.",
+                },
+                { status: 409 }
+            );
+        }
 
         return NextResponse.json(
             {
@@ -440,6 +501,7 @@ export async function POST(request: Request) {
         );
     }
 }
+
 
 
 // ============================================================
@@ -486,6 +548,7 @@ export async function GET() {
                     fieldOfficerId: 1,
                     fieldOfficerName: 1,
                     clusterName: 1,
+                    clusterNumber: 1,
                     lga: 1,
                     community: 1,
                     venue: 1,
@@ -587,6 +650,9 @@ export async function GET() {
 
                         clusterName:
                             session.clusterName,
+
+                        clusterNumber:
+                            session.clusterNumber,
 
                         lga:
                             session.lga,

@@ -6,7 +6,7 @@ interface DashboardStatsProps {
     role: UserRole;
 
     stats: {
-        totalTrainingSessions: number;
+        clustersTrained: number;
         totalExpectedCollectors: number;
         totalCollectors: number;
         totalNewlyRecruitedCollectors: number;
@@ -15,6 +15,7 @@ interface DashboardStatsProps {
         completionRate: number;
     };
 }
+
 
 function TrainingIcon() {
     return (
@@ -145,9 +146,9 @@ export default function DashboardStats({
 
     const cards = [
         {
-            title: "Training Sessions",
-            value: stats.totalTrainingSessions,
-            description: "Total sessions",
+            title: "Clusters Trained",
+            value: stats.clustersTrained,
+            description: "Total clusters trained",
             icon: <TrainingIcon />,
             iconBg: "bg-green-50",
             iconColor: "text-green-600",
@@ -171,16 +172,16 @@ export default function DashboardStats({
 
         ...(canViewNewlyRecruited
             ? [
-                  {
-                      title: "Newly Recruited",
-                      value:
-                          stats.totalNewlyRecruitedCollectors,
-                      description: "New collectors",
-                      icon: <UserPlusIcon />,
-                      iconBg: "bg-orange-50",
-                      iconColor: "text-orange-500",
-                  },
-              ]
+                {
+                    title: "Newly Recruited",
+                    value:
+                        stats.totalNewlyRecruitedCollectors,
+                    description: "New collectors",
+                    icon: <UserPlusIcon />,
+                    iconBg: "bg-orange-50",
+                    iconColor: "text-orange-500",
+                },
+            ]
             : []),
 
         {
@@ -199,11 +200,10 @@ export default function DashboardStats({
             {cards.map((card) => (
                 <div
                     key={card.title}
-                    className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
-                        card.featured
+                    className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${card.featured
                             ? "border-green-600 bg-linear-to-br from-green-700 via-green-600 to-green-700 text-white shadow-lg shadow-green-700/15"
                             : "border-gray-100 bg-white shadow-sm hover:border-green-100"
-                    }`}
+                        }`}
                 >
                     {card.featured && (
                         <>
@@ -216,54 +216,49 @@ export default function DashboardStats({
                         <div className="flex items-start justify-between">
                             <div>
                                 <p
-                                    className={`text-sm font-semibold ${
-                                        card.featured
+                                    className={`text-sm font-semibold ${card.featured
                                             ? "text-green-50"
                                             : "text-gray-500"
-                                    }`}
+                                        }`}
                                 >
                                     {card.title}
                                 </p>
 
                                 <p
-                                    className={`mt-3 text-3xl font-bold tracking-tight ${
-                                        card.featured
+                                    className={`mt-3 text-3xl font-bold tracking-tight ${card.featured
                                             ? "text-white"
                                             : "text-gray-900"
-                                    }`}
+                                        }`}
                                 >
                                     {card.value}
                                 </p>
                             </div>
 
                             <div
-                                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                                    card.featured
+                                className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${card.featured
                                         ? "bg-white/15"
                                         : card.iconBg
-                                } ${card.iconColor}`}
+                                    } ${card.iconColor}`}
                             >
                                 {card.icon}
                             </div>
                         </div>
 
                         <div
-                            className={`mt-4 flex items-center gap-2 border-t pt-3 ${
-                                card.featured
+                            className={`mt-4 flex items-center gap-2 border-t pt-3 ${card.featured
                                     ? "border-white/15"
                                     : "border-gray-100"
-                            }`}
+                                }`}
                         >
                             {card.featured && (
                                 <span className="h-1.5 w-1.5 rounded-full bg-orange-300" />
                             )}
 
                             <p
-                                className={`text-xs font-medium ${
-                                    card.featured
+                                className={`text-xs font-medium ${card.featured
                                         ? "text-green-100"
                                         : "text-gray-400"
-                                }`}
+                                    }`}
                             >
                                 {card.description}
                             </p>

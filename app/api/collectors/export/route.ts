@@ -84,6 +84,7 @@ export async function GET(
             "ADMIN",
             "WRITE",
             "READ_ONLY",
+            "RESTRICTED_READ_ONLY"
         ]);
 
     if (error) {
@@ -259,13 +260,26 @@ export async function GET(
             gender;
     }
 
+
     /*
      * Newly recruited filter
+     *
+     * RESTRICTED_READ_ONLY users must never
+     * receive newly recruited collectors,
+     * regardless of the URL filter supplied.
      */
-    if (recruited) {
+    if (
+        user.role ===
+        "RESTRICTED_READ_ONLY"
+    ) {
+        collectorQuery.newlyRecruited = {
+            $ne: "Yes",
+        };
+    } else if (recruited) {
         collectorQuery.newlyRecruited =
             recruited;
     }
+
 
     /*
      * Collector name search
@@ -324,9 +338,17 @@ export async function GET(
                             .toString()
                     );
 
-                return {
-                    "Collector ID":
-                        collector._id.toString(),
+                const row: Record<
+                    string,
+                    unknown
+                > = {
+                    ...(user.role !==
+                        "RESTRICTED_READ_ONLY"
+                        ? {
+                            "Collector ID":
+                                collector._id.toString(),
+                        }
+                        : {}),
 
                     "Collector Name":
                         collector.fullName,
@@ -337,8 +359,13 @@ export async function GET(
                     "Phone Number":
                         collector.phoneNumber,
 
-                    "Newly Recruited":
-                        collector.newlyRecruited,
+                    ...(user.role !==
+                        "RESTRICTED_READ_ONLY"
+                        ? {
+                            "Newly Recruited":
+                                collector.newlyRecruited,
+                        }
+                        : {}),
 
                     "Training Session ID":
                         collector
@@ -365,6 +392,10 @@ export async function GET(
                         training?.lga ||
                         "",
                 };
+
+                return row;
+
+
             }
         );
 

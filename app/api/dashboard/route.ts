@@ -21,21 +21,28 @@ export async function GET() {
         const client = await clientPromise;
         const db = client.db(process.env.MONGODB_DB);
 
+
         const isAdmin = session.user.role === "ADMIN";
         const isReadOnly = session.user.role === "READ_ONLY";
+        const isRestrictedReadOnly =
+            session.user.role === "RESTRICTED_READ_ONLY";
 
-        // WRITE users only see their own training sessions.
-        // ADMIN and READ_ONLY users see all sessions.
+        // ADMIN, READ_ONLY, and RESTRICTED_READ_ONLY
+        // can see all training sessions.
+        // WRITE users only see their own Field Officer records.
         const sessionQuery =
-            isAdmin || isReadOnly
+            isAdmin ||
+                isReadOnly ||
+                isRestrictedReadOnly
                 ? {}
                 : { fieldOfficerId: session.user.foId };
+
 
         // --------------------------------------------------
         // Training session statistics
         // --------------------------------------------------
 
-        const totalTrainingSessions = await db
+        const clustersTrained = await db
             .collection("training_sessions")
             .countDocuments(sessionQuery);
 
@@ -70,7 +77,7 @@ export async function GET() {
         );
 
         const collectorQuery =
-            isAdmin || isReadOnly
+            isAdmin || isReadOnly || isRestrictedReadOnly
                 ? {}
                 : {
                     trainingSessionId: {
@@ -171,7 +178,7 @@ export async function GET() {
             success: true,
 
             stats: {
-                totalTrainingSessions,
+                clustersTrained,
                 completedTrainingSessions,
                 totalExpectedCollectors,
                 totalCollectors,

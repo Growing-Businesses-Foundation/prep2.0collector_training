@@ -5,6 +5,7 @@ import type { UserRole } from "@/lib/models/user";
 import {
     useState,
     useRef,
+    useEffect,
     type FormEvent,
 } from "react";
 
@@ -22,7 +23,7 @@ interface TrainingFormProps {
         trainingDate: string;
         fieldOfficerId: string;
         fieldOfficerName?: string;
-        clusterName: string;
+        clusterNumber: string;
         lga: string;
         community: string;
         venue: string;
@@ -403,8 +404,24 @@ export default function TrainingForm({
     const [fieldOfficerId, setFieldOfficerId] =
         useState(initialData?.fieldOfficerId || foId || "");
 
-    const [clusterName, setClusterName] =
-        useState(initialData?.clusterName || "");
+
+    const [fieldOfficers, setFieldOfficers] = useState<
+        Array<{
+            foId: string;
+            name: string;
+        }>
+    >([]);
+
+    const [fieldOfficersLoading, setFieldOfficersLoading] =
+        useState(false);
+
+    const [fieldOfficersError, setFieldOfficersError] =
+        useState("");
+
+
+    const [clusterNumber, setClusterNumber] =
+        useState(initialData?.clusterNumber || "");
+
 
     const [lga, setLga] =
         useState(initialData?.lga || "");
@@ -447,6 +464,48 @@ export default function TrainingForm({
 
     const galleryInputRef =
         useRef<HTMLInputElement>(null);
+
+
+    useEffect(() => {
+        if (role !== "ADMIN") {
+            return;
+        }
+
+        async function loadFieldOfficers() {
+            try {
+                setFieldOfficersLoading(true);
+                setFieldOfficersError("");
+
+                const response = await fetch(
+                    "/api/fieldOfficers"
+                );
+
+                const data = await response.json();
+
+                if (!response.ok || !data.success) {
+                    throw new Error(
+                        data.message ||
+                        "Failed to load field officers."
+                    );
+                }
+
+                setFieldOfficers(data.fieldOfficers || []);
+            } catch (error) {
+                console.error(
+                    "Failed to load field officers:",
+                    error
+                );
+
+                setFieldOfficersError(
+                    "Unable to load field officers."
+                );
+            } finally {
+                setFieldOfficersLoading(false);
+            }
+        }
+
+        loadFieldOfficers();
+    }, [role]);
 
     // ============================================================
     // LOCATION
@@ -658,7 +717,7 @@ export default function TrainingForm({
 
             formData.append("trainingDate", trainingDate);
             formData.append("fieldOfficerId", fieldOfficerId);
-            formData.append("clusterName", clusterName);
+            formData.append("clusterNumber", clusterNumber);
             formData.append("lga", lga);
             formData.append("community", community);
             formData.append("venue", venue);
@@ -766,7 +825,7 @@ export default function TrainingForm({
                  */
                 if (!isEditMode) {
                     setTrainingDate("");
-                    setClusterName("");
+                    setClusterNumber("");
                     setLga("");
                     setCommunity("");
                     setVenue("");
@@ -935,42 +994,54 @@ export default function TrainingForm({
                                     </p>
                                 </>
                             ) : (
-                                <InputField
-                                    id="fieldOfficer"
-                                    label=""
-                                    value={
-                                        fieldOfficerId
-                                    }
-                                    onChange={(
-                                        event
-                                    ) =>
-                                        setFieldOfficerId(
-                                            event
-                                                .target
-                                                .value
-                                        )
-                                    }
-                                    placeholder="Enter Field Officer ID"
-                                />
+                                <div>
+                                    <select
+                                        id="fieldOfficer"
+                                        value={fieldOfficerId}
+                                        onChange={(event) =>
+                                            setFieldOfficerId(event.target.value)
+                                        }
+                                        required
+                                        disabled={fieldOfficersLoading}
+                                        className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 disabled:cursor-not-allowed disabled:bg-gray-50"
+                                    >
+                                        <option value="">
+                                            {fieldOfficersLoading
+                                                ? "Loading field officers..."
+                                                : "Select Field Officer"}
+                                        </option>
+
+                                        {fieldOfficers.map((officer) => (
+                                            <option
+                                                key={officer.foId}
+                                                value={officer.foId}
+                                            >
+                                                {officer.name} — {officer.foId}
+                                            </option>
+                                        ))}
+                                    </select>
+
+                                    {fieldOfficersError ? (
+                                        <p className="mt-2 text-xs text-red-600">
+                                            {fieldOfficersError}
+                                        </p>
+                                    ) : (
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            Select the Field Officer responsible for this training.
+                                        </p>
+                                    )}
+                                </div>
                             )}
                         </div>
 
                         <InputField
-                            id="clusterName"
-                            label="Cluster Name"
-                            value={
-                                clusterName
+                            id="clusterNumber"
+                            label="Cluster Number"
+                            value={clusterNumber}
+                            onChange={(event) =>
+                                setClusterNumber(event.target.value)
                             }
-                            onChange={(
-                                event
-                            ) =>
-                                setClusterName(
-                                    event
-                                        .target
-                                        .value
-                                )
-                            }
-                            placeholder="e.g. FO 1 C1"
+                            placeholder="e.g. C1"
                         />
 
                         <InputField

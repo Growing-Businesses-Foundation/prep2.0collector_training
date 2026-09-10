@@ -1,3 +1,5 @@
+//components/dashboard/RecentTrainings.tsx
+
 interface RecentTraining {
     id: string;
     trainingDate: string;
@@ -198,11 +200,11 @@ export default function RecentTrainings({
 
                     <div>
                         <h2 className="text-lg font-bold tracking-tight text-gray-900">
-                            Recent Training Sessions
+                            Recent Clusters
                         </h2>
 
                         <p className="mt-1.5 text-sm text-gray-500">
-                            Latest training activities recorded by field
+                            Latest cluster training activities recorded by field
                             officers.
                         </p>
                     </div>
@@ -217,11 +219,11 @@ export default function RecentTrainings({
                     </div>
 
                     <p className="mt-5 text-sm font-semibold text-gray-900">
-                        No training sessions yet
+                        No clusters recorded yet
                     </p>
 
                     <p className="mt-1.5 max-w-sm text-sm leading-6 text-gray-500">
-                        Training sessions will appear here once they are
+                        Cluster training activities will appear here once they are
                         recorded in the system.
                     </p>
                 </div>

@@ -374,17 +374,14 @@ export default async function TrainingSessionsPage({
                         </div>
 
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            {session.user.role !== "RESTRICTED_READ_ONLY" && (
-                                <TrainingExportButton
-                                    search={search}
-                                    fieldOfficer={fieldOfficer}
-                                    lga={lga}
-                                    status={status}
-                                    fromDate={fromDate}
-                                    toDate={toDate}
-                                />
-                            )}                        
-
+                            <TrainingExportButton
+                                search={search}
+                                fieldOfficer={fieldOfficer}
+                                lga={lga}
+                                status={status}
+                                fromDate={fromDate}
+                                toDate={toDate}
+                            />
 
                             {(
                                 session.user.role === "ADMIN" ||

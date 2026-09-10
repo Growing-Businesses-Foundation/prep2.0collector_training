@@ -1,4 +1,5 @@
-//app/training/[trainingSessionId]/edit/page.tsx
+// app/training/[trainingSessionId]/edit/page.tsx
+
 import { notFound, redirect } from "next/navigation";
 import { ObjectId } from "mongodb";
 
@@ -136,8 +137,8 @@ export default async function EditTrainingPage({
                         fieldOfficerName:
                             trainingSession.fieldOfficerName || "",
 
-                        clusterName:
-                            trainingSession.clusterName || "",
+                        clusterNumber:
+                            trainingSession.clusterNumber || "",
 
                         lga:
                             trainingSession.lga || "",

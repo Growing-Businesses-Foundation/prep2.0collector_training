@@ -57,6 +57,7 @@ export async function GET(
             "ADMIN",
             "WRITE",
             "READ_ONLY",
+            "RESTRICTED_READ_ONLY"
         ]);
 
     if (error) {

@@ -164,7 +164,7 @@ export async function getDashboardData(
     // TRAINING SESSION STATISTICS
     // --------------------------------------------------
 
-    const totalTrainingSessions =
+    const clustersTrained =
         sessionsWithStatus.length;
 
     const totalExpectedCollectors =
@@ -287,7 +287,7 @@ export async function getDashboardData(
 
     return {
         stats: {
-            totalTrainingSessions,
+            clustersTrained,
 
             totalExpectedCollectors,
 

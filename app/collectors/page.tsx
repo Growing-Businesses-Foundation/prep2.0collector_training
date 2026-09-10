@@ -215,19 +215,26 @@ export default async function CollectorsPage({
     }
 
     /*
-     * Newly recruited filter
-     *
-     * Restricted read-only users cannot use
-     * this filter, including through a manually
-     * constructed URL.
-     */
+    
+    /*
+    * Newly recruited access
+    *
+    * RESTRICTED_READ_ONLY users must never
+    * receive newly recruited collectors,
+    * even if the URL contains ?recruited=Yes.
+    */
     if (
-        recruited &&
-        canViewNewlyRecruited
+        session.user.role ===
+        "RESTRICTED_READ_ONLY"
     ) {
+        collectorQuery.newlyRecruited = {
+            $ne: "Yes",
+        };
+    } else if (recruited) {
         collectorQuery.newlyRecruited =
             recruited;
     }
+
 
     /*
      * Collector name search
@@ -444,22 +451,20 @@ export default async function CollectorsPage({
                             </p>
                         </div>
 
+
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            {session.user.role !==
-                                "RESTRICTED_READ_ONLY" && (
-                                    <CollectorExportButton
-                                        search={search}
-                                        gender={gender}
-                                        recruited={recruited}
-                                        fieldOfficer={
-                                            fieldOfficer
-                                        }
-                                        lga={lga}
-                                        cluster={cluster}
-                                        fromDate={fromDate}
-                                        toDate={toDate}
-                                    />
-                                )}
+                            <CollectorExportButton
+                                search={search}
+                                gender={gender}
+                                recruited={recruited}
+                                fieldOfficer={
+                                    fieldOfficer
+                                }
+                                lga={lga}
+                                cluster={cluster}
+                                fromDate={fromDate}
+                                toDate={toDate}
+                            />
 
                             {canManageCollectors && (
                                 <a
