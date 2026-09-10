@@ -161,6 +161,9 @@ export async function GET(
                 clusterName: 1,
                 lga: 1,
                 community: 1,
+                venue: 1,
+                latitude: 1, 
+                longitude: 1,
                 expectedCollectors: 1,
             })
             .toArray();
@@ -258,8 +261,14 @@ export async function GET(
                         training.clusterName,
                     "Community":
                         training.community,
+                    "Training Venue":
+                        training.venue,
                     "LGA":
                         training.lga,
+                    "Latitude":
+                        training.latitude,
+                    "Longitude":
+                        training.longitude,
                     "Expected Collectors":
                         expectedCollectors,
                     "Recorded Collectors":
