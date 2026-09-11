@@ -1,5 +1,7 @@
 "use client";
 
+import { useNotification } from "@/context/NotificationContext";
+
 interface CollectorExportButtonProps {
     search?: string;
     gender?: string;
@@ -21,86 +23,115 @@ export default function CollectorExportButton({
     fromDate = "",
     toDate = "",
 }: CollectorExportButtonProps) {
-    const handleExport = () => {
-        const params =
-            new URLSearchParams();
+    const { notify } = useNotification();
+
+    const handleExport = async () => {
+        const params = new URLSearchParams();
 
         if (search) {
-            params.set(
-                "search",
-                search
-            );
+            params.set("search", search);
         }
 
         if (gender) {
-            params.set(
-                "gender",
-                gender
-            );
+            params.set("gender", gender);
         }
 
         if (recruited) {
-            params.set(
-                "recruited",
-                recruited
-            );
+            params.set("recruited", recruited);
         }
 
         if (fieldOfficer) {
-            params.set(
-                "fieldOfficer",
-                fieldOfficer
-            );
+            params.set("fieldOfficer", fieldOfficer);
         }
 
         if (lga) {
-            params.set(
-                "lga",
-                lga
-            );
+            params.set("lga", lga);
         }
 
         if (cluster) {
-            params.set(
-                "cluster",
-                cluster
-            );
+            params.set("cluster", cluster);
         }
 
         if (fromDate) {
-            params.set(
-                "fromDate",
-                fromDate
-            );
+            params.set("fromDate", fromDate);
         }
 
         if (toDate) {
-            params.set(
-                "toDate",
-                toDate
-            );
+            params.set("toDate", toDate);
         }
 
         const downloadUrl =
             `/api/collectors/export?${params.toString()}`;
 
-        const link =
-            document.createElement(
-                "a"
+        try {
+            const response =
+                await fetch(downloadUrl);
+
+            if (!response.ok) {
+                let message =
+                    "The collector CSV could not be exported.";
+
+                try {
+                    const data =
+                        await response.json();
+
+                    if (data.message) {
+                        message =
+                            data.message;
+                    }
+                } catch {
+                    // Ignore JSON parsing errors.
+                }
+
+                notify.error({
+                    title: "Collector Export Failed",
+                    message,
+                });
+
+                return;
+            }
+
+            const blob =
+                await response.blob();
+
+            const url =
+                window.URL.createObjectURL(
+                    blob
+                );
+
+            const link =
+                document.createElement("a");
+
+            link.href = url;
+            link.download =
+                "collectors.csv";
+
+            document.body.appendChild(
+                link
             );
 
-        link.href = downloadUrl;
-        link.download = "";
+            link.click();
 
-        document.body.appendChild(
-            link
-        );
+            document.body.removeChild(
+                link
+            );
 
-        link.click();
+            window.URL.revokeObjectURL(
+                url
+            );
 
-        document.body.removeChild(
-            link
-        );
+            notify.success({
+                title: "Collector Export Complete",
+                message:
+                    "The collector CSV has been downloaded successfully.",
+            });
+        } catch {
+            notify.error({
+                title: "Collector Export Failed",
+                message:
+                    "The collector CSV could not be downloaded. Please try again.",
+            });
+        }
     };
 
     return (

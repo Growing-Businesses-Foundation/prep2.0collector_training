@@ -1,6 +1,5 @@
-//components/training/TrainingForm.tsx
-
 "use client";
+
 import type { UserRole } from "@/lib/models/user";
 import {
     useState,
@@ -9,6 +8,7 @@ import {
     type FormEvent,
 } from "react";
 
+import { useNotification } from "@/context/NotificationContext";
 
 interface TrainingFormProps {
     role: UserRole;
@@ -34,8 +34,6 @@ interface TrainingFormProps {
         photoUrl?: string | null;
     };
 }
-
-
 
 function CalendarIcon() {
     return (
@@ -382,8 +380,8 @@ function InputField({
                 readOnly={readOnly}
                 disabled={disabled}
                 className={`w-full rounded-xl border px-4 py-3 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 ${disabled || readOnly
-                    ? "border-gray-200 bg-gray-50 text-gray-600"
-                    : "border-gray-200 bg-white hover:border-gray-300 focus:border-green-500 focus:ring-4 focus:ring-green-500/10"
+                        ? "border-gray-200 bg-gray-50 text-gray-600"
+                        : "border-gray-200 bg-white hover:border-gray-300 focus:border-green-500 focus:ring-4 focus:ring-green-500/10"
                     }`}
             />
         </div>
@@ -398,12 +396,17 @@ export default function TrainingForm({
     trainingSessionId,
     initialData,
 }: TrainingFormProps) {
+    const { notify } = useNotification();
+
     const [trainingDate, setTrainingDate] =
         useState(initialData?.trainingDate || "");
 
     const [fieldOfficerId, setFieldOfficerId] =
-        useState(initialData?.fieldOfficerId || foId || "");
-
+        useState(
+            initialData?.fieldOfficerId ||
+            foId ||
+            ""
+        );
 
     const [fieldOfficers, setFieldOfficers] = useState<
         Array<{
@@ -418,10 +421,8 @@ export default function TrainingForm({
     const [fieldOfficersError, setFieldOfficersError] =
         useState("");
 
-
     const [clusterNumber, setClusterNumber] =
         useState(initialData?.clusterNumber || "");
-
 
     const [lga, setLga] =
         useState(initialData?.lga || "");
@@ -441,16 +442,29 @@ export default function TrainingForm({
     const [photoPreview, setPhotoPreview] =
         useState("");
 
-    const existingPhotoUrl = initialData?.photoUrl || "";
+    const existingPhotoUrl =
+        initialData?.photoUrl || "";
 
     const [expectedCollectors, setExpectedCollectors] =
-        useState(initialData?.expectedCollectors ? String(initialData.expectedCollectors) : "");
+        useState(
+            initialData?.expectedCollectors
+                ? String(initialData.expectedCollectors)
+                : ""
+        );
 
     const [latitude, setLatitude] =
-        useState(initialData?.latitude !== undefined ? String(initialData.latitude) : "");
+        useState(
+            initialData?.latitude !== undefined
+                ? String(initialData.latitude)
+                : ""
+        );
 
     const [longitude, setLongitude] =
-        useState(initialData?.longitude !== undefined ? String(initialData.longitude) : "");
+        useState(
+            initialData?.longitude !== undefined
+                ? String(initialData.longitude)
+                : ""
+        );
 
     const [locationLoading, setLocationLoading] =
         useState(false);
@@ -464,7 +478,6 @@ export default function TrainingForm({
 
     const galleryInputRef =
         useRef<HTMLInputElement>(null);
-
 
     useEffect(() => {
         if (role !== "ADMIN") {
@@ -480,16 +493,22 @@ export default function TrainingForm({
                     "/api/fieldOfficers"
                 );
 
-                const data = await response.json();
+                const data =
+                    await response.json();
 
-                if (!response.ok || !data.success) {
+                if (
+                    !response.ok ||
+                    !data.success
+                ) {
                     throw new Error(
                         data.message ||
                         "Failed to load field officers."
                     );
                 }
 
-                setFieldOfficers(data.fieldOfficers || []);
+                setFieldOfficers(
+                    data.fieldOfficers || []
+                );
             } catch (error) {
                 console.error(
                     "Failed to load field officers:",
@@ -500,7 +519,9 @@ export default function TrainingForm({
                     "Unable to load field officers."
                 );
             } finally {
-                setFieldOfficersLoading(false);
+                setFieldOfficersLoading(
+                    false
+                );
             }
         }
 
@@ -513,9 +534,12 @@ export default function TrainingForm({
 
     function captureLocation() {
         if (!navigator.geolocation) {
-            alert(
-                "Geolocation is not supported by this device."
-            );
+            notify.error({
+                title: "Location Not Supported",
+                message:
+                    "Geolocation is not supported by this device.",
+            });
+
             return;
         }
 
@@ -532,6 +556,12 @@ export default function TrainingForm({
                 );
 
                 setLocationLoading(false);
+
+                notify.success({
+                    title: "Location Captured",
+                    message:
+                        "The training venue GPS coordinates are ready.",
+                });
             },
             (error) => {
                 console.error(
@@ -539,9 +569,11 @@ export default function TrainingForm({
                     error
                 );
 
-                alert(
-                    "Unable to get your location. Please allow location access and try again."
-                );
+                notify.error({
+                    title: "Location Capture Failed",
+                    message:
+                        "Unable to get your location. Please allow location access and try again.",
+                });
 
                 setLocationLoading(false);
             },
@@ -557,34 +589,48 @@ export default function TrainingForm({
     // PHOTO HANDLING
     // ============================================================
 
-
     async function handlePhotoChange(
         event: React.ChangeEvent<HTMLInputElement>
     ) {
-        const file = event.target.files?.[0];
+        const file =
+            event.target.files?.[0];
 
         if (!file) {
             return;
         }
 
         if (!file.type.startsWith("image/")) {
-            alert("Please select an image file.");
+            notify.error({
+                title: "Invalid Photo",
+                message:
+                    "Please select a valid image file.",
+            });
+
             event.target.value = "";
             return;
         }
 
         try {
-            const compressedFile = await compressImage(file);
+            const compressedFile =
+                await compressImage(file);
 
             console.log(
                 "Original photo size:",
-                (file.size / 1024 / 1024).toFixed(2),
+                (
+                    file.size /
+                    1024 /
+                    1024
+                ).toFixed(2),
                 "MB"
             );
 
             console.log(
                 "Compressed photo size:",
-                (compressedFile.size / 1024 / 1024).toFixed(2),
+                (
+                    compressedFile.size /
+                    1024 /
+                    1024
+                ).toFixed(2),
                 "MB"
             );
 
@@ -592,39 +638,54 @@ export default function TrainingForm({
              * Keep the final uploaded image safely below
              * Vercel's 4.5 MB request payload limit.
              */
-            if (compressedFile.size > 3 * 1024 * 1024) {
-                alert(
-                    "The photo is still too large after compression. Please choose another photo."
-                );
+            if (
+                compressedFile.size >
+                3 * 1024 * 1024
+            ) {
+                notify.error({
+                    title: "Photo Too Large",
+                    message:
+                        "The photo is still too large after compression. Please choose another photo.",
+                });
 
                 event.target.value = "";
                 return;
             }
 
             if (photoPreview) {
-                URL.revokeObjectURL(photoPreview);
+                URL.revokeObjectURL(
+                    photoPreview
+                );
             }
 
             const previewUrl =
-                URL.createObjectURL(compressedFile);
+                URL.createObjectURL(
+                    compressedFile
+                );
 
             setPhoto(compressedFile);
             setPhotoPreview(previewUrl);
 
+            notify.success({
+                title: "Photo Ready",
+                message:
+                    "The training evidence photo has been prepared successfully.",
+            });
         } catch (error) {
             console.error(
                 "Photo processing error:",
                 error
             );
 
-            alert(
-                "Unable to process this photo. Please try another image."
-            );
+            notify.error({
+                title: "Photo Processing Failed",
+                message:
+                    "Unable to process this photo. Please try another image.",
+            });
 
             event.target.value = "";
         }
     }
-
 
     function removePhoto() {
         if (photoPreview) {
@@ -651,24 +712,20 @@ export default function TrainingForm({
     // SUBMIT
     // ============================================================
 
-
     async function handleSubmit(
         event: FormEvent<HTMLFormElement>
     ) {
         event.preventDefault();
 
-        // Prevent accidental double submission
-        if (submitting) {
-            return;
-        }
-
         if (!latitude || !longitude) {
-            alert(
-                "Please capture the training venue location before continuing."
-            );
+            notify.warning({
+                title: "Location Required",
+                message:
+                    "Please capture the training venue location before continuing.",
+            });
+
             return;
         }
-
 
         /*
          * A photo is mandatory when creating a training session.
@@ -681,9 +738,12 @@ export default function TrainingForm({
             mode === "create" &&
             !photo
         ) {
-            alert(
-                "Please take or upload a training evidence photo before continuing."
-            );
+            notify.warning({
+                title: "Training Evidence Required",
+                message:
+                    "Please take or upload a training evidence photo before continuing.",
+            });
+
             return;
         }
 
@@ -692,21 +752,25 @@ export default function TrainingForm({
             !photo &&
             !existingPhotoUrl
         ) {
-            alert(
-                "This training session does not have an existing evidence photo. Please upload one before saving."
-            );
+            notify.warning({
+                title: "Training Evidence Required",
+                message:
+                    "This training session does not have an existing evidence photo. Please upload one before saving.",
+            });
+
             return;
         }
-
-
 
         if (
             !expectedCollectors ||
             Number(expectedCollectors) <= 0
         ) {
-            alert(
-                "Please enter the expected number of collectors."
-            );
+            notify.warning({
+                title: "Expected Collectors Required",
+                message:
+                    "Please enter the expected number of collectors.",
+            });
+
             return;
         }
 
@@ -715,54 +779,92 @@ export default function TrainingForm({
 
             const formData = new FormData();
 
-            formData.append("trainingDate", trainingDate);
-            formData.append("fieldOfficerId", fieldOfficerId);
-            formData.append("clusterNumber", clusterNumber);
-            formData.append("lga", lga);
-            formData.append("community", community);
-            formData.append("venue", venue);
-            formData.append("facilitator", facilitator);
+            formData.append(
+                "trainingDate",
+                trainingDate
+            );
+
+            formData.append(
+                "fieldOfficerId",
+                fieldOfficerId
+            );
+
+            formData.append(
+                "clusterNumber",
+                clusterNumber
+            );
+
+            formData.append(
+                "lga",
+                lga
+            );
+
+            formData.append(
+                "community",
+                community
+            );
+
+            formData.append(
+                "venue",
+                venue
+            );
+
+            formData.append(
+                "facilitator",
+                facilitator
+            );
 
             formData.append(
                 "expectedCollectors",
-                String(Number(expectedCollectors))
+                String(
+                    Number(
+                        expectedCollectors
+                    )
+                )
             );
 
             formData.append(
                 "latitude",
-                String(Number(latitude))
+                String(
+                    Number(latitude)
+                )
             );
 
             formData.append(
                 "longitude",
-                String(Number(longitude))
+                String(
+                    Number(longitude)
+                )
             );
 
-
             if (photo) {
-                formData.append("photo", photo);
+                formData.append(
+                    "photo",
+                    photo
+                );
             }
-
-
 
             const isEditMode =
                 mode === "edit";
 
-            const endpoint = isEditMode
-                ? `/api/training-sessions/${trainingSessionId}`
-                : "/api/training-sessions";
+            const endpoint =
+                isEditMode
+                    ? `/api/training-sessions/${trainingSessionId}`
+                    : "/api/training-sessions";
 
-            const method = isEditMode
-                ? "PUT"
-                : "POST";
+            const method =
+                isEditMode
+                    ? "PUT"
+                    : "POST";
 
-            const response = await fetch(
-                endpoint,
-                {
-                    method,
-                    body: formData,
-                }
-            );
+            const response =
+                await fetch(
+                    endpoint,
+                    {
+                        method,
+                        body: formData,
+                    }
+                );
 
             /*
              * Read the response as text first.
@@ -771,7 +873,8 @@ export default function TrainingForm({
              * if the connection closes before a valid JSON body
              * is received.
              */
-            const responseText = await response.text();
+            const responseText =
+                await response.text();
 
             let data: {
                 success?: boolean;
@@ -782,7 +885,9 @@ export default function TrainingForm({
 
             try {
                 data = responseText
-                    ? JSON.parse(responseText)
+                    ? JSON.parse(
+                        responseText
+                    )
                     : {};
             } catch {
                 console.error(
@@ -792,36 +897,43 @@ export default function TrainingForm({
             }
 
             if (!response.ok) {
-                alert(
-                    data.message ||
-                    `Failed to create training session. (${response.status})`
-                );
+                notify.error({
+                    title:
+                        response.status ===
+                            409
+                            ? "Duplicate Cluster"
+                            : "Unable to Save Training",
+                    message:
+                        data.message ||
+                        `Failed to save training session. (${response.status})`,
+                });
+
                 return;
             }
 
             /*
              * The server completed successfully.
              */
-
             if (data.success) {
                 if (isEditMode) {
-                    alert(
-                        "Training session updated successfully."
-                    );
+                    notify.success({
+                        title: "Training Updated",
+                        message:
+                            "The training session was updated successfully.",
+                    });
                 } else {
-                    alert(
-                        `Training session created successfully.\n\nSession ID: ${data.trainingSessionId ||
-                        "Created successfully"
-                        }`
-                    );
+                    notify.success({
+                        title: "Cluster Created",
+                        message:
+                            "The training session and cluster were created successfully.",
+                    });
                 }
 
                 /*
                  * Only reset the form after creating a new
                  * training session.
                  *
-                 * During edit mode we will redirect back to
-                 * the Training Sessions page in the next step.
+                 * During edit mode we keep the current values.
                  */
                 if (!isEditMode) {
                     setTrainingDate("");
@@ -851,49 +963,40 @@ export default function TrainingForm({
                 return;
             }
 
-
             /*
              * Server responded but did not indicate success.
              */
-            alert(
-                data.message ||
-                "Training session could not be created."
-            );
-
+            notify.error({
+                title: "Unable to Save Training",
+                message:
+                    data.message ||
+                    "Training session could not be saved.",
+            });
         } catch (error) {
             console.error(
                 "Training submission error:",
                 error
             );
 
-            if (error instanceof TypeError) {
-                alert(
-                    `Network error: ${error.message} \n\nPlease check your connection to the training server.`
-                );
+            if (
+                error instanceof TypeError
+            ) {
+                notify.error({
+                    title: "Network Error",
+                    message:
+                        "Please check your connection to the training server and try again.",
+                });
             } else {
-                alert(
-                    "Something went wrong while saving the training session."
-                );
+                notify.error({
+                    title: "Something Went Wrong",
+                    message:
+                        "The training session could not be saved. Please try again.",
+                });
             }
         } finally {
             setSubmitting(false);
         }
-
-
-        /*
-         * IMPORTANT:
-         * At this point we cannot know whether the server
-         * completed the operation or the request failed before
-         * reaching the server.
-         */
-        //     alert(
-        //         "The connection was interrupted while saving the training session. Please check your Training page before submitting again."
-        //     );
-        // } finally {
-        //     setSubmitting(false);
-        // }
     }
-
 
     return (
         <form
@@ -901,8 +1004,8 @@ export default function TrainingForm({
             className="space-y-6"
         >
             {/* ====================================================
-                MAIN INFORMATION
-            ==================================================== */}
+                    MAIN INFORMATION
+                ==================================================== */}
 
             <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
                 <div className="h-1 bg-linear-to-r from-green-600 via-green-500 to-orange-400" />
@@ -997,12 +1100,22 @@ export default function TrainingForm({
                                 <div>
                                     <select
                                         id="fieldOfficer"
-                                        value={fieldOfficerId}
-                                        onChange={(event) =>
-                                            setFieldOfficerId(event.target.value)
+                                        value={
+                                            fieldOfficerId
+                                        }
+                                        onChange={(
+                                            event
+                                        ) =>
+                                            setFieldOfficerId(
+                                                event
+                                                    .target
+                                                    .value
+                                            )
                                         }
                                         required
-                                        disabled={fieldOfficersLoading}
+                                        disabled={
+                                            fieldOfficersLoading
+                                        }
                                         className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition hover:border-gray-300 focus:border-green-500 focus:ring-4 focus:ring-green-500/10 disabled:cursor-not-allowed disabled:bg-gray-50"
                                     >
                                         <option value="">
@@ -1011,19 +1124,35 @@ export default function TrainingForm({
                                                 : "Select Field Officer"}
                                         </option>
 
-                                        {fieldOfficers.map((officer) => (
-                                            <option
-                                                key={officer.foId}
-                                                value={officer.foId}
-                                            >
-                                                {officer.name} — {officer.foId}
-                                            </option>
-                                        ))}
+                                        {fieldOfficers.map(
+                                            (
+                                                officer
+                                            ) => (
+                                                <option
+                                                    key={
+                                                        officer.foId
+                                                    }
+                                                    value={
+                                                        officer.foId
+                                                    }
+                                                >
+                                                    {
+                                                        officer.name
+                                                    }{" "}
+                                                    —{" "}
+                                                    {
+                                                        officer.foId
+                                                    }
+                                                </option>
+                                            )
+                                        )}
                                     </select>
 
                                     {fieldOfficersError ? (
                                         <p className="mt-2 text-xs text-red-600">
-                                            {fieldOfficersError}
+                                            {
+                                                fieldOfficersError
+                                            }
                                         </p>
                                     ) : (
                                         <p className="mt-2 text-xs text-gray-500">
@@ -1037,9 +1166,17 @@ export default function TrainingForm({
                         <InputField
                             id="clusterNumber"
                             label="Cluster Number"
-                            value={clusterNumber}
-                            onChange={(event) =>
-                                setClusterNumber(event.target.value)
+                            value={
+                                clusterNumber
+                            }
+                            onChange={(
+                                event
+                            ) =>
+                                setClusterNumber(
+                                    event
+                                        .target
+                                        .value
+                                )
                             }
                             placeholder="e.g. C1"
                         />
@@ -1165,8 +1302,8 @@ export default function TrainingForm({
             </section>
 
             {/* ====================================================
-                EVIDENCE PHOTO
-            ==================================================== */}
+                    EVIDENCE PHOTO
+                ==================================================== */}
 
             <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
                 <div className="p-6 md:p-8">
@@ -1175,14 +1312,12 @@ export default function TrainingForm({
                             <CameraIcon />
                         }
                         title="Training Evidence"
-
                         description={
-                            mode === "edit"
+                            mode ===
+                                "edit"
                                 ? "Keep the existing training evidence or upload a new photo if you need to replace it."
                                 : "Take a new photo with your camera or choose an existing image from your device."
                         }
-
-
                     />
 
                     {/* Hidden camera input */}
@@ -1214,11 +1349,8 @@ export default function TrainingForm({
                         className="hidden"
                     />
 
-                    {!photo && !existingPhotoUrl ? (
-                        /*
-                         * No existing photo and no new photo:
-                         * show the normal upload area.
-                         */
+                    {!photo &&
+                        !existingPhotoUrl ? (
                         <div className="space-y-4">
                             {/* Upload area */}
                             <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50/50 p-6 text-center">
@@ -1285,15 +1417,14 @@ export default function TrainingForm({
                             </div>
                         </div>
                     ) : photo ? (
-                        /*
-                         * A NEW photo has been selected.
-                         */
                         <div className="rounded-2xl border border-green-200 bg-green-50/40 p-4">
                             {/* New photo preview */}
                             {photoPreview && (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                    src={photoPreview}
+                                    src={
+                                        photoPreview
+                                    }
                                     alt="New training evidence preview"
                                     className="max-h-96 w-full rounded-xl object-cover shadow-sm"
                                 />
@@ -1308,11 +1439,20 @@ export default function TrainingForm({
 
                                     <div className="min-w-0">
                                         <p className="truncate text-sm font-semibold text-gray-800">
-                                            {photo.name}
+                                            {
+                                                photo.name
+                                            }
                                         </p>
 
                                         <p className="mt-0.5 text-xs text-gray-400">
-                                            {(photo.size / 1024 / 1024).toFixed(2)} MB
+                                            {(
+                                                photo.size /
+                                                1024 /
+                                                1024
+                                            ).toFixed(
+                                                2
+                                            )}{" "}
+                                            MB
                                         </p>
                                     </div>
                                 </div>
@@ -1324,7 +1464,9 @@ export default function TrainingForm({
 
                                     <button
                                         type="button"
-                                        onClick={removePhoto}
+                                        onClick={
+                                            removePhoto
+                                        }
                                         className="rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
                                     >
                                         Remove
@@ -1358,17 +1500,14 @@ export default function TrainingForm({
                             </div>
                         </div>
                     ) : (
-                        /*
-                         * EDIT MODE:
-                         * Existing Google Drive photo is available and the
-                         * user has NOT selected a replacement photo.
-                         */
                         <div className="rounded-2xl border border-gray-200 bg-gray-50/60 p-4">
                             {/* Existing photo preview */}
                             {existingPhotoUrl && (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
-                                    src={existingPhotoUrl}
+                                    src={
+                                        existingPhotoUrl
+                                    }
                                     alt="Existing training evidence"
                                     className="max-h-96 w-full rounded-xl object-cover shadow-sm"
                                 />
@@ -1443,13 +1582,12 @@ export default function TrainingForm({
                             </div>
                         </div>
                     )}
-
                 </div>
             </section>
 
             {/* ====================================================
-                LOCATION
-            ==================================================== */}
+                    LOCATION
+                ==================================================== */}
 
             <section className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
                 <div className="p-6 md:p-8">
@@ -1466,9 +1604,9 @@ export default function TrainingForm({
                             <div className="flex items-center gap-3">
                                 <div
                                     className={`flex h-11 w-11 items-center justify-center rounded-xl ${latitude &&
-                                        longitude
-                                        ? "bg-green-100 text-green-600"
-                                        : "bg-orange-100 text-orange-500"
+                                            longitude
+                                            ? "bg-green-100 text-green-600"
+                                            : "bg-orange-100 text-orange-500"
                                         }`}
                                 >
                                     {latitude &&
@@ -1571,8 +1709,8 @@ export default function TrainingForm({
             </section>
 
             {/* ====================================================
-                SUBMIT
-            ==================================================== */}
+                    SUBMIT
+                ==================================================== */}
 
             <div className="rounded-2xl border border-green-100 bg-linear-to-r from-green-50 to-orange-50 p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

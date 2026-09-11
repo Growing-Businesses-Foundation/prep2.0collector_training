@@ -99,6 +99,14 @@ export async function POST(request: Request) {
             );
         }
 
+        // Normalize values for duplicate detection
+        const normalizedName = fullName
+            .trim()
+            .replace(/\s+/g, " ")
+            .toLowerCase()
+
+        const normalizedPhone = phoneNumber.trim();
+
         const client = await clientPromise;
         const db = client.db(process.env.MONGODB_DB);
 
@@ -134,6 +142,25 @@ export async function POST(request: Request) {
             );
         }
 
+        // Prevent duplicate collectors
+        const existingCollector = await db
+            .collection("collectors")
+            .findOne({
+                normalizedName,
+                normalizedPhone,
+            });
+
+        if (existingCollector) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "A collector with the same name and phone number already exists.",
+                },
+                { status: 409 }
+            );
+        }
+
         // Count collectors already recorded
         const recordedCollectors = await db
             .collection("collectors")
@@ -157,70 +184,91 @@ export async function POST(request: Request) {
         }
 
         // Save collector
-        const result = await db.collection("collectors").insertOne({
-            trainingSessionId: new ObjectId(trainingSessionId),
-            fullName: fullName.trim(),
-            gender,
-            phoneNumber,
-            newlyRecruited,
-            createdAt: new Date(),
-        });
-
-
-        await logActivity({
-            userId: user.id,
-            userName: user.name ?? undefined,
-            userEmail: user.email ?? undefined,
-            action: "COLLECTOR_CREATED",
-            resource: "collector",
-            resourceId: result.insertedId.toString(),
-            description: `Added collector to training session ${trainingSessionId}`,
-            metadata: {
-                trainingSessionId,
+        try {
+            const result = await db.collection("collectors").insertOne({
+                trainingSessionId: new ObjectId(trainingSessionId),
+                fullName: fullName.trim(),
                 gender,
+                phoneNumber: normalizedPhone,
                 newlyRecruited,
-            },
-        });
+                normalizedName,
+                normalizedPhone,
+                createdAt: new Date(),
+            });
 
-
-        /*
-         * Automatically update training status
-         * based on the number of collectors recorded.
-         */
-        const newRecordedCollectors = recordedCollectors + 1;
-        const expectedCollectors = Number(
-            trainingSession.expectedCollectors || 0
-        );
-
-        let trainingStatus: "Not Started" | "In Progress" | "Completed";
-
-        if (newRecordedCollectors >= expectedCollectors) {
-            trainingStatus = "Completed";
-        } else if (newRecordedCollectors > 0) {
-            trainingStatus = "In Progress";
-        } else {
-            trainingStatus = "Not Started";
-        }
-
-        await db.collection("training_sessions").updateOne(
-            {
-                _id: new ObjectId(trainingSessionId),
-            },
-            {
-                $set: {
-                    trainingStatus,
-                    updatedAt: new Date(),
+            await logActivity({
+                userId: user.id,
+                userName: user.name ?? undefined,
+                userEmail: user.email ?? undefined,
+                action: "COLLECTOR_CREATED",
+                resource: "collector",
+                resourceId: result.insertedId.toString(),
+                description: `Added collector to training session ${trainingSessionId}`,
+                metadata: {
+                    trainingSessionId,
+                    gender,
+                    newlyRecruited,
                 },
-            }
-        );
+            });
 
-        return NextResponse.json({
-            success: true,
-            message: "Collector recorded successfully.",
-            collectorId: result.insertedId.toString(),
-            trainingStatus,
-            recordedCollectors: newRecordedCollectors,
-        });
+            /*
+             * Automatically update training status
+             * based on the number of collectors recorded.
+             */
+            const newRecordedCollectors = recordedCollectors + 1;
+            const expectedCollectors = Number(
+                trainingSession.expectedCollectors || 0
+            );
+
+            let trainingStatus: "Not Started" | "In Progress" | "Completed";
+
+            if (newRecordedCollectors >= expectedCollectors) {
+                trainingStatus = "Completed";
+            } else if (newRecordedCollectors > 0) {
+                trainingStatus = "In Progress";
+            } else {
+                trainingStatus = "Not Started";
+            }
+
+            await db.collection("training_sessions").updateOne(
+                {
+                    _id: new ObjectId(trainingSessionId),
+                },
+                {
+                    $set: {
+                        trainingStatus,
+                        updatedAt: new Date(),
+                    },
+                }
+            );
+
+            return NextResponse.json({
+                success: true,
+                message: "Collector recorded successfully.",
+                collectorId: result.insertedId.toString(),
+                trainingStatus,
+                recordedCollectors: newRecordedCollectors,
+            });
+        } catch (insertError) {
+            // Database-level duplicate protection
+            if (
+                insertError &&
+                typeof insertError === "object" &&
+                "code" in insertError &&
+                insertError.code === 11000
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "A collector with the same name and phone number already exists.",
+                    },
+                    { status: 409 }
+                );
+            }
+
+            throw insertError;
+        }
     } catch (error) {
         console.error("Collector creation error:", error);
 

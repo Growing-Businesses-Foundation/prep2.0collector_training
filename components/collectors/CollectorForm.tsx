@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useNotification } from "@/context/NotificationContext";
 
 import { CollectorFormProps } from "@/types/collector";
 
@@ -209,6 +210,7 @@ function FieldLabel({
 export default function CollectorForm({ }: CollectorFormProps) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const { notify } = useNotification();
 
     const trainingSessionId =
         searchParams.get("trainingSessionId");
@@ -361,23 +363,28 @@ export default function CollectorForm({ }: CollectorFormProps) {
         setSuccessMessage("");
 
         if (!selectedSessionId) {
-            alert("Please select a training session.");
+            notify.warning({
+                title: "Training Session Required",
+                message: "Please select a training session before recording a collector.",
+            });
             return;
         }
 
         if (isTrainingComplete) {
-            alert(
-                "All expected collectors have already been recorded."
-            );
+            notify.warning({
+                title: "Training Complete",
+                message: "All expected collectors have already been recorded for this training session.",
+            });
             return;
         }
 
         const phoneRegex = /^0[789][01]\d{8}$/;
 
         if (!phoneRegex.test(phoneNumber)) {
-            alert(
-                "Enter a valid Nigerian mobile number."
-            );
+            notify.warning({
+                title: "Invalid Phone Number",
+                message: "Enter a valid Nigerian mobile number.",
+            });
             return;
         }
 
@@ -406,10 +413,16 @@ export default function CollectorForm({ }: CollectorFormProps) {
             const data = await response.json();
 
             if (!response.ok) {
-                alert(
-                    data.message ||
-                    "Failed to record collector."
-                );
+                notify.error({
+                    title:
+                        response.status === 409
+                            ? "Duplicate Collector"
+                            : "Unable to Record Collector",
+                    message:
+                        data.message ||
+                        "Failed to record collector.",
+                });
+
                 return;
             }
 
@@ -433,6 +446,15 @@ export default function CollectorForm({ }: CollectorFormProps) {
 
             clearCollectorForm();
 
+            notify.success({
+                title: "Collector Recorded",
+                message:
+                    newRecordedCollectors >=
+                        expectedCollectors
+                        ? "Collector recorded successfully. All expected collectors have now been recorded."
+                        : `Collector recorded successfully. ${newRecordedCollectors} of ${expectedCollectors} collectors recorded.`,
+            });
+
             if (
                 newRecordedCollectors >=
                 expectedCollectors
@@ -451,13 +473,16 @@ export default function CollectorForm({ }: CollectorFormProps) {
                 error
             );
 
-            alert(
-                "Something went wrong. Please try again."
-            );
+            notify.error({
+                title: "Something Went Wrong",
+                message:
+                    "The collector could not be recorded. Please try again.",
+            });
         } finally {
             setSaving(false);
         }
     }
+
 
     /* =====================================================
        Render
@@ -666,8 +691,8 @@ export default function CollectorForm({ }: CollectorFormProps) {
                                 <div className="flex items-center gap-2">
                                     <div
                                         className={`flex h-8 w-8 items-center justify-center rounded-lg ${isTrainingComplete
-                                                ? "bg-green-100 text-green-600"
-                                                : "bg-orange-100 text-orange-600"
+                                            ? "bg-green-100 text-green-600"
+                                            : "bg-orange-100 text-orange-600"
                                             }`}
                                     >
                                         {isTrainingComplete ? (
@@ -711,8 +736,8 @@ export default function CollectorForm({ }: CollectorFormProps) {
                         <div className="mt-5 h-3 overflow-hidden rounded-full bg-gray-200">
                             <div
                                 className={`h-full rounded-full transition-all duration-500 ${isTrainingComplete
-                                        ? "bg-green-500"
-                                        : "bg-orange-500"
+                                    ? "bg-green-500"
+                                    : "bg-orange-500"
                                     }`}
                                 style={{
                                     width: `${progress}%`,
@@ -765,8 +790,8 @@ export default function CollectorForm({ }: CollectorFormProps) {
 
                 <section
                     className={`p-5 sm:p-7 ${isTrainingComplete
-                            ? "opacity-60"
-                            : ""
+                        ? "opacity-60"
+                        : ""
                         }`}
                 >
                     <div className="mb-6 flex items-start gap-3">
@@ -916,18 +941,18 @@ export default function CollectorForm({ }: CollectorFormProps) {
                                         )
                                     }
                                     className={`rounded-xl border px-4 py-3.5 text-left transition ${newlyRecruited ===
-                                            "Yes"
-                                            ? "border-green-500 bg-green-50 ring-4 ring-green-500/10"
-                                            : "border-gray-200 bg-white hover:border-gray-300"
+                                        "Yes"
+                                        ? "border-green-500 bg-green-50 ring-4 ring-green-500/10"
+                                        : "border-gray-200 bg-white hover:border-gray-300"
                                         } disabled:cursor-not-allowed disabled:bg-gray-50`}
                                 >
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p
                                                 className={`text-sm font-bold ${newlyRecruited ===
-                                                        "Yes"
-                                                        ? "text-green-700"
-                                                        : "text-gray-800"
+                                                    "Yes"
+                                                    ? "text-green-700"
+                                                    : "text-gray-800"
                                                     }`}
                                             >
                                                 Yes
@@ -960,18 +985,18 @@ export default function CollectorForm({ }: CollectorFormProps) {
                                         )
                                     }
                                     className={`rounded-xl border px-4 py-3.5 text-left transition ${newlyRecruited ===
-                                            "No"
-                                            ? "border-orange-400 bg-orange-50 ring-4 ring-orange-400/10"
-                                            : "border-gray-200 bg-white hover:border-gray-300"
+                                        "No"
+                                        ? "border-orange-400 bg-orange-50 ring-4 ring-orange-400/10"
+                                        : "border-gray-200 bg-white hover:border-gray-300"
                                         } disabled:cursor-not-allowed disabled:bg-gray-50`}
                                 >
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <p
                                                 className={`text-sm font-bold ${newlyRecruited ===
-                                                        "No"
-                                                        ? "text-orange-600"
-                                                        : "text-gray-800"
+                                                    "No"
+                                                    ? "text-orange-600"
+                                                    : "text-gray-800"
                                                     }`}
                                             >
                                                 No

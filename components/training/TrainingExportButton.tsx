@@ -1,5 +1,7 @@
 "use client";
 
+import { useNotification } from "@/context/NotificationContext";
+
 interface TrainingExportButtonProps {
     search?: string;
     fieldOfficer?: string;
@@ -17,7 +19,9 @@ export default function TrainingExportButton({
     fromDate = "",
     toDate = "",
 }: TrainingExportButtonProps) {
-    const handleExport = () => {
+    const { notify } = useNotification();
+
+    const handleExport = async () => {
         const params = new URLSearchParams();
 
         if (search) {
@@ -25,10 +29,7 @@ export default function TrainingExportButton({
         }
 
         if (fieldOfficer) {
-            params.set(
-                "fieldOfficer",
-                fieldOfficer
-            );
+            params.set("fieldOfficer", fieldOfficer);
         }
 
         if (lga) {
@@ -50,15 +51,57 @@ export default function TrainingExportButton({
         const downloadUrl =
             `/api/training-sessions/export?${params.toString()}`;
 
-        const link =
-            document.createElement("a");
+        try {
+            const response = await fetch(downloadUrl);
 
-        link.href = downloadUrl;
-        link.download = "";
+            if (!response.ok) {
+                let message =
+                    "The training CSV could not be exported.";
 
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+                try {
+                    const data = await response.json();
+
+                    if (data.message) {
+                        message = data.message;
+                    }
+                } catch {
+                    // Ignore JSON parsing errors.
+                }
+
+                notify.error({
+                    title: "Training Export Failed",
+                    message,
+                });
+
+                return;
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+
+            link.href = url;
+            link.download = "training-sessions.csv";
+
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+
+            window.URL.revokeObjectURL(url);
+
+            notify.success({
+                title: "Training Export Complete",
+                message:
+                    "The training CSV has been downloaded successfully.",
+            });
+        } catch {
+            notify.error({
+                title: "Training Export Failed",
+                message:
+                    "The training CSV could not be downloaded. Please try again.",
+            });
+        }
     };
 
     return (

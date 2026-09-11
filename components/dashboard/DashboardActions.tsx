@@ -1,6 +1,8 @@
+//components/dashboard/DashboardActions.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
+
 
 interface DashboardActionsProps {
     canWrite: boolean;
@@ -216,6 +218,7 @@ export default function DashboardActions({
     canWrite,
 }: DashboardActionsProps) {
     const router = useRouter();
+    
 
     return (
         <section className="mt-10">
@@ -239,8 +242,8 @@ export default function DashboardActions({
 
             <div
                 className={`grid gap-5 ${canWrite
-                        ? "sm:grid-cols-2 xl:grid-cols-4"
-                        : "sm:grid-cols-2"
+                    ? "sm:grid-cols-2 xl:grid-cols-4"
+                    : "sm:grid-cols-2"
                     }`}
             >
                 {canWrite && (
