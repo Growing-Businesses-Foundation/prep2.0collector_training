@@ -6,6 +6,7 @@ import { ObjectId } from "mongodb";
 import { authOptions } from "@/lib/auth";
 import AppShell from "@/components/layout/AppShell";
 import BackButton from "@/components/navigation/BackButton";
+import DashboardAutoRefresh from "@/components/dashboard/DashboardAutoRefresh";
 import clientPromise from "@/lib/mongodb";
 
 interface PageProps {
@@ -162,6 +163,7 @@ export default async function TrainingSessionCollectorsPage({
 
     return (
         <AppShell role={session.user.role}>
+            <DashboardAutoRefresh />
             <div className="min-h-full px-4 py-6 sm:px-6 sm:py-8">
                 <div className="mx-auto max-w-7xl">
                     {/* Back */}
@@ -207,10 +209,10 @@ export default async function TrainingSessionCollectorsPage({
                             <div className="mt-3">
                                 <span
                                     className={`inline-flex rounded-full px-3 py-1.5 text-sm font-medium ${trainingStatus === "Completed"
-                                            ? "bg-green-50 text-green-700"
-                                            : trainingStatus === "In Progress"
-                                                ? "bg-blue-50 text-blue-700"
-                                                : "bg-yellow-50 text-yellow-700"
+                                        ? "bg-green-50 text-green-700"
+                                        : trainingStatus === "In Progress"
+                                            ? "bg-blue-50 text-blue-700"
+                                            : "bg-yellow-50 text-yellow-700"
                                         }`}
                                 >
                                     {trainingStatus}
@@ -504,9 +506,9 @@ export default async function TrainingSessionCollectorsPage({
                                                             <td className="px-5 py-4">
                                                                 <span
                                                                     className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                                            "Yes"
-                                                                            ? "bg-green-50 text-green-700"
-                                                                            : "bg-gray-100 text-gray-600"
+                                                                        "Yes"
+                                                                        ? "bg-green-50 text-green-700"
+                                                                        : "bg-gray-100 text-gray-600"
                                                                         }`}
                                                                 >
                                                                     {
@@ -555,9 +557,9 @@ export default async function TrainingSessionCollectorsPage({
                                                     {canViewNewlyRecruited && (
                                                         <span
                                                             className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${collector.newlyRecruited ===
-                                                                    "Yes"
-                                                                    ? "bg-green-50 text-green-700"
-                                                                    : "bg-gray-100 text-gray-600"
+                                                                "Yes"
+                                                                ? "bg-green-50 text-green-700"
+                                                                : "bg-gray-100 text-gray-600"
                                                                 }`}
                                                         >
                                                             {
