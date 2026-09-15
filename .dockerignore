@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+
+.env
+.env.local
+.env.*.local
+
+google-drive-service-account.json
+atlas-credentials.env
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+Dockerfile
+.dockerignore

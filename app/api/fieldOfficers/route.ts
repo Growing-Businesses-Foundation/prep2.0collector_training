@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import client from "@/lib/mongodb";
+import clientPromise from "@/lib/mongodb";
 
 export async function GET() {
     try {
@@ -26,7 +26,7 @@ export async function GET() {
                 { status: 403 }
             );
         }
-
+        const client = await clientPromise;
         const db = client.db("collector_training");
 
         const fieldOfficers = await db

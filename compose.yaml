@@ -1,0 +1,9 @@
+services:
+  app:
+    image: prep2-cluster:latest
+    container_name: prep2-cluster
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.docker
+    restart: unless-stopped
