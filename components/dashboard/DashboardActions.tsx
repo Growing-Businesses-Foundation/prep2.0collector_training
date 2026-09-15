@@ -218,7 +218,7 @@ export default function DashboardActions({
     canWrite,
 }: DashboardActionsProps) {
     const router = useRouter();
-    
+
 
     return (
         <section className="mt-10">
@@ -272,7 +272,11 @@ export default function DashboardActions({
 
                 <ActionCard
                     title="Training Sessions"
-                    description="View and manage recorded training sessions."
+                    description={
+                        canWrite
+                            ? "View and manage recorded training sessions."
+                            : "View recorded training sessions."
+                    }
                     icon={<TrainingIcon />}
                     variant="neutral"
                     onClick={() => router.push("/training")}

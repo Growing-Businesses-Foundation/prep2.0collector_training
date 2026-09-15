@@ -366,10 +366,9 @@ export default async function TrainingSessionsPage({
                             </h1>
 
                             <p className="mt-2 text-sm text-gray-500">
-                                View and manage
-                                training sessions
-                                recorded in the
-                                system.
+                                {session.user.role === "ADMIN" || session.user.role === "WRITE"
+                                    ? "View and manage training sessions recorded in the system."
+                                    : "View training sessions recorded in the system."}
                             </p>
                         </div>
 
