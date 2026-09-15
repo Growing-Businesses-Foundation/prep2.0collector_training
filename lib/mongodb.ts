@@ -15,7 +15,7 @@ const options = {
 
 declare global {
     var _mongoClientPromise: Promise<MongoClient> | undefined;
-}
+};
 
 function createMongoClient(): Promise<MongoClient> {
     const uri = process.env.MONGODB_URI;
@@ -33,12 +33,33 @@ function createMongoClient(): Promise<MongoClient> {
     return client.connect();
 }
 
-if (!global._mongoClientPromise) {
-    global._mongoClientPromise = Promise.resolve().then(
-        createMongoClient
-    );
+function getMongoClientPromise(): Promise<MongoClient> {
+    if (!global._mongoClientPromise) {
+        global._mongoClientPromise = createMongoClient();
+    }
+
+    return global._mongoClientPromise;
 }
 
-const clientPromise = global._mongoClientPromise;
+const clientPromise = {
+    then<TResult1 = MongoClient, TResult2 = never>(
+        onfulfilled?:
+            | ((value: MongoClient) => TResult1 | PromiseLike<TResult1>)
+            | null,
+        onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ) {
+        return getMongoClientPromise().then(onfulfilled, onrejected);
+    },
+
+    catch<TResult = never>(
+        onrejected?: ((reason: unknown) => TResult | PromiseLike<TResult>) | null
+    ) {
+        return getMongoClientPromise().catch(onrejected);
+    },
+
+    finally(onfinally?: (() => void) | null) {
+        return getMongoClientPromise().finally(onfinally);
+    },
+};
 
 export default clientPromise;
