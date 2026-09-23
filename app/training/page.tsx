@@ -362,7 +362,7 @@ export default async function TrainingSessionsPage({
                             </p>
 
                             <h1 className="mt-1 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-                                Training Sessions
+                                Clusters Trained
                             </h1>
 
                             <p className="mt-2 text-sm text-gray-500">

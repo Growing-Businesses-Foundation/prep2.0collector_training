@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
+import { requireMaintenanceAccess } from "@/lib/maintenance-api";
 
 export async function GET() {
     const session = await getServerSession(authOptions);
@@ -15,6 +16,12 @@ export async function GET() {
             },
             { status: 401 }
         );
+    }
+
+    const maintenanceResponse = await requireMaintenanceAccess();
+
+    if (maintenanceResponse) {
+        return maintenanceResponse;
     }
 
     try {

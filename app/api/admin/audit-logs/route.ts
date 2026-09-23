@@ -17,6 +17,8 @@ const ALLOWED_ACTIONS = [
     "TRAINING_UPDATED",
     "COLLECTOR_CREATED",
     "COLLECTOR_UPDATED",
+    "MAINTENANCE_MODE_ENABLED",
+    "MAINTENANCE_MODE_DISABLED",
 ] as const;
 
 export async function GET(request: Request) {
@@ -95,13 +97,13 @@ export async function GET(request: Request) {
 
             if (dateFrom) {
                 createdAt.$gte = new Date(
-                    `${dateFrom} T00:00:00.000Z`
+                    `${dateFrom}T00:00:00.000Z`
                 );
             }
 
             if (dateTo) {
                 createdAt.$lte = new Date(
-                    `${dateTo} T23: 59: 59.999Z`
+                    `${dateTo}T23:59:59.999Z`
                 );
             }
 

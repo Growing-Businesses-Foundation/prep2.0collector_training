@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { requireRole } from "@/lib/auth-utils";
+import { requireMaintenanceAccess } from "@/lib/maintenance-api";
 
 function escapeCsv(value: unknown): string {
     if (
@@ -91,6 +92,12 @@ export async function GET(
         return error;
     }
 
+    const maintenanceResponse = await requireMaintenanceAccess();
+
+    if (maintenanceResponse) {
+        return maintenanceResponse;
+    }
+    
     const { searchParams } =
         new URL(request.url);
 

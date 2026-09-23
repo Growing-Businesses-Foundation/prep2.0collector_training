@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { getServerSession } from "next-auth";
+import { ObjectId } from "mongodb";
+
 import "./globals.css";
 
 import { NotificationProvider } from "@/context/NotificationContext";
+import { getMaintenanceSettings } from "@/lib/maintenance";
+import { authOptions } from "@/lib/auth";
+import clientPromise from "@/lib/mongodb";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,11 +50,80 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const requestHeaders = await headers();
+  const pathname =
+    requestHeaders.get("x-prep2-pathname") ?? "/";
+
+  /*
+   * These routes must remain accessible while maintenance mode
+   * is active.
+   */
+  const isMaintenancePage = pathname === "/maintenance";
+  const isLoginPage = pathname === "/login";
+
+  if (!isMaintenancePage && !isLoginPage) {
+    const maintenance = await getMaintenanceSettings();
+
+    if (maintenance.maintenanceMode) {
+      const session = await getServerSession(authOptions);
+
+      console.log("=== MAINTENANCE CHECK ===");
+      console.log("Path:", pathname);
+      console.log("Maintenance mode:", maintenance.maintenanceMode);
+      console.log("Session user:", session?.user);
+
+      let isAdmin = false;
+
+      if (session?.user?.id) {
+        try {
+          console.log("Session user ID:", session.user.id);
+
+          const userId = new ObjectId(session.user.id);
+
+          const client = await clientPromise;
+          const db = client.db(process.env.MONGODB_DB);
+
+          console.log("MongoDB database:", process.env.MONGODB_DB);
+
+          const user = await db.collection("users").findOne({
+            _id: userId,
+            isActive: true,
+          });
+
+          console.log("Database user:", user
+            ? {
+              id: user._id.toString(),
+              email: user.email,
+              role: user.role,
+              isActive: user.isActive,
+            }
+            : null
+          );
+
+          isAdmin = user?.role === "ADMIN";
+
+          console.log("Is admin:", isAdmin);
+        } catch (error) {
+          console.error("ADMIN CHECK ERROR:", error);
+          isAdmin = false;
+        }
+      } else {
+        console.log("NO SESSION USER ID");
+      }
+
+      console.log("========================");
+
+      if (!isAdmin) {
+        redirect("/maintenance");
+      }
+    }
+  }
+
   return (
     <html
       lang="en"

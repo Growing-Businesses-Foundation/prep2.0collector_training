@@ -7,6 +7,7 @@ import clientPromise from "@/lib/mongodb";
 import { logActivity } from "@/lib/audit";
 import { validatePassword } from "@/lib/validation/password";
 import { ObjectId } from "mongodb";
+import { requireMaintenanceAccess } from "@/lib/maintenance-api";
 
 export async function POST(request: Request) {
     try {
@@ -20,6 +21,12 @@ export async function POST(request: Request) {
                 },
                 { status: 401 }
             );
+        }
+
+        const maintenanceResponse = await requireMaintenanceAccess();
+
+        if (maintenanceResponse) {
+            return maintenanceResponse;
         }
 
         const body = await request.json();
@@ -110,7 +117,7 @@ export async function POST(request: Request) {
                 userId: user._id.toString(),
                 userName: user.name,
                 userEmail: user.email,
-                action: "LOGIN_FAILED",
+                action: "PASSWORD_CHANGE_FAILED",
                 description: "Password change failed because the current password was incorrect.",
                 metadata: {
                     reason: "INVALID_CURRENT_PASSWORD",
@@ -128,6 +135,8 @@ export async function POST(request: Request) {
 
         const passwordHash = await bcrypt.hash(newPassword, 12);
 
+        const currentSessionVersion = user.sessionVersion ?? 1;
+
         await db.collection("users").updateOne(
             {
                 _id: user._id,
@@ -135,6 +144,7 @@ export async function POST(request: Request) {
             {
                 $set: {
                     passwordHash,
+                    sessionVersion: currentSessionVersion + 1,
                     updatedAt: new Date(),
                 },
             }

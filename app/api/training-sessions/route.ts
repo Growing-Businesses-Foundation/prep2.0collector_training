@@ -6,6 +6,7 @@ import clientPromise from "@/lib/mongodb";
 import { requireRole } from "@/lib/auth-utils";
 import { uploadTrainingPhoto } from "@/lib/google-drive";
 import { logActivity } from "@/lib/audit";
+import { requireMaintenanceAccess } from "@/lib/maintenance-api";
 
 export async function POST(request: Request) {
     const { user, error } = await requireRole([
@@ -15,6 +16,12 @@ export async function POST(request: Request) {
 
     if (error) {
         return error;
+    }
+
+    const maintenanceResponse = await requireMaintenanceAccess();
+
+    if (maintenanceResponse) {
+        return maintenanceResponse;
     }
 
     try {
@@ -517,6 +524,12 @@ export async function GET() {
 
     if (error) {
         return error;
+    }
+
+    const maintenanceResponse = await requireMaintenanceAccess();
+
+    if (maintenanceResponse) {
+        return maintenanceResponse;
     }
 
     try {

@@ -1,7 +1,8 @@
-// lib/auth.ts
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import { ObjectId } from "mongodb";
+
 import clientPromise from "@/lib/mongodb";
 import { logActivity } from "@/lib/audit";
 
@@ -36,10 +37,6 @@ export const authOptions: NextAuthOptions = {
                     isActive: true,
                 });
 
-                // ------------------------------------------------
-                // User not found / inactive
-                // ------------------------------------------------
-
                 if (!user) {
                     await logActivity({
                         action: "LOGIN_FAILED",
@@ -52,10 +49,6 @@ export const authOptions: NextAuthOptions = {
 
                     return null;
                 }
-
-                // ------------------------------------------------
-                // Check password
-                // ------------------------------------------------
 
                 const passwordMatch = await bcrypt.compare(
                     credentials.password,
@@ -77,10 +70,6 @@ export const authOptions: NextAuthOptions = {
                     return null;
                 }
 
-                // ------------------------------------------------
-                // Successful login
-                // ------------------------------------------------
-
                 await logActivity({
                     userId: user._id.toString(),
                     userName: user.name,
@@ -99,6 +88,7 @@ export const authOptions: NextAuthOptions = {
                     email: user.email,
                     role: user.role,
                     foId: user.foId,
+                    sessionVersion: user.sessionVersion ?? 1,
                 };
             },
         }),
@@ -116,21 +106,74 @@ export const authOptions: NextAuthOptions = {
     },
 
     callbacks: {
+        /*
+         * The JWT only needs the user's ID.
+         *
+         * Role and other authorization data are loaded from
+         * MongoDB whenever the session is resolved.
+         */
         async jwt({ token, user }) {
             if (user) {
                 token.id = user.id;
-                token.role = user.role;
-                token.foId = user.foId;
+                token.sessionVersion = user.sessionVersion;
             }
 
             return token;
         },
 
+        /*
+         * MongoDB is the source of truth for the current user.
+         *
+         * This allows role changes to take effect without
+         * requiring the user to log out and log back in.
+         */
         async session({ session, token }) {
-            if (session.user) {
-                session.user.id = token.id;
-                session.user.role = token.role;
-                session.user.foId = token.foId;
+            if (!session.user || !token.id) {
+                return {
+                    ...session,
+                    user: undefined,
+                };
+            }
+
+            try {
+                const client = await clientPromise;
+                const db = client.db(process.env.MONGODB_DB);
+
+                const user = await db.collection("users").findOne({
+                    _id: new ObjectId(token.id),
+                });
+
+                if (!user || user.isActive !== true) {
+                    return {
+                        ...session,
+                        user: undefined,
+                    };
+                }
+
+                const currentSessionVersion = user.sessionVersion ?? 1;
+
+                if (token.sessionVersion !== currentSessionVersion) {
+                    return {
+                        ...session,
+                        user: undefined,
+                    };
+                }
+
+                session.user.id = user._id.toString();
+                session.user.name = user.name;
+                session.user.email = user.email;
+                session.user.role = user.role;
+                session.user.foId = user.foId;
+            } catch (error) {
+                console.error(
+                    "Failed to load current user session data:",
+                    error
+                );
+
+                return {
+                    ...session,
+                    user: undefined,
+                };
             }
 
             return session;

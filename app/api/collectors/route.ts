@@ -4,12 +4,19 @@ import { ObjectId } from "mongodb";
 import clientPromise from "@/lib/mongodb";
 import { requireRole } from "@/lib/auth-utils";
 import { logActivity } from "@/lib/audit";
+import { requireMaintenanceAccess } from "@/lib/maintenance-api";
 
 export async function POST(request: Request) {
     const { user, error } = await requireRole(["ADMIN", "WRITE"]);
 
     if (error) {
         return error;
+    }
+
+    const maintenanceResponse = await requireMaintenanceAccess();
+
+    if (maintenanceResponse) {
+        return maintenanceResponse;
     }
 
     try {

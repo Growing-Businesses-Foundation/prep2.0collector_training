@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
+import { requireMaintenanceAccess } from "@/lib/maintenance-api";
 
 export async function GET() {
     try {
@@ -25,6 +26,12 @@ export async function GET() {
                 },
                 { status: 403 }
             );
+        }
+
+        const maintenanceResponse = await requireMaintenanceAccess();
+
+        if (maintenanceResponse) {
+            return maintenanceResponse;
         }
 
         const client = await clientPromise;
