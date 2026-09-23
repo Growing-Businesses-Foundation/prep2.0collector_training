@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { requireRole } from "@/lib/auth-utils";
+import { requireMaintenanceAccess } from "@/lib/maintenance-api";
 
 function escapeCsv(value: unknown): string {
     if (value === null || value === undefined) {
@@ -62,6 +63,11 @@ export async function GET(
 
     if (error) {
         return error;
+    }
+    const maintenanceResponse = await requireMaintenanceAccess();
+
+    if (maintenanceResponse) {
+        return maintenanceResponse;
     }
 
     const { searchParams } =
@@ -163,7 +169,7 @@ export async function GET(
                 lga: 1,
                 community: 1,
                 venue: 1,
-                latitude: 1, 
+                latitude: 1,
                 longitude: 1,
                 expectedCollectors: 1,
             })

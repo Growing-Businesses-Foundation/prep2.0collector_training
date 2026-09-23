@@ -7,6 +7,7 @@ import clientPromise from "@/lib/mongodb";
 import { requireRole } from "@/lib/auth-utils";
 import { uploadTrainingPhoto } from "@/lib/google-drive";
 import { logActivity } from "@/lib/audit";
+import { requireMaintenanceAccess } from "@/lib/maintenance-api";
 
 interface RouteContext {
     params: Promise<{
@@ -24,6 +25,13 @@ export async function PUT(
     ]);
 
     if (error) return error;
+
+    const maintenanceResponse = await requireMaintenanceAccess();
+
+    if (maintenanceResponse) {
+        return maintenanceResponse;
+    }
+
 
     try {
         const { trainingSessionId } = await context.params;

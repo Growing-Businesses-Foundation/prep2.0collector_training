@@ -15,7 +15,9 @@ export type AuditAction =
     | "TRAINING_CREATED"
     | "TRAINING_UPDATED"
     | "COLLECTOR_CREATED"
-    | "COLLECTOR_UPDATED";
+    | "COLLECTOR_UPDATED"
+    | "MAINTENANCE_MODE_ENABLED"
+    | "MAINTENANCE_MODE_DISABLED"
 
 
 export interface AuditLog {
