@@ -55,7 +55,7 @@ export default function CollectorFilters({
         role !== "RESTRICTED_READ_ONLY";
 
     const canFilterByFieldOfficer =
-        role === "ADMIN";
+        role !== "WRITE";
 
     function updateFilter(
         key: string,
