@@ -9,11 +9,13 @@ import {
 interface TrainingFiltersProps {
     fieldOfficers: string[];
     lgas: string[];
+    role: string;
 }
 
 export default function TrainingFilters({
     fieldOfficers,
     lgas,
+    role,
 }: TrainingFiltersProps) {
     const router = useRouter();
     const pathname = usePathname();
@@ -68,6 +70,9 @@ export default function TrainingFilters({
         currentFromDate ||
         currentToDate;
 
+    const canFilterByFieldOfficer =
+        role === "ADMIN";
+
     return (
         <div className="mt-8 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex flex-col gap-4">
@@ -121,49 +126,43 @@ export default function TrainingFilters({
                 {/* Dropdown filters */}
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {/* Field Officer */}
-                    <div>
-                        <label
-                            htmlFor="field-officer-filter"
-                            className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-                        >
-                            Field Officer
-                        </label>
+                    {canFilterByFieldOfficer && (
+                        <div>
+                            <label
+                                htmlFor="field-officer-filter"
+                                className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
+                            >
+                                Field Officer
+                            </label>
 
-                        <select
-                            id="field-officer-filter"
-                            value={
-                                currentFieldOfficer
-                            }
-                            onChange={(event) =>
-                                updateFilter(
-                                    "fieldOfficer",
-                                    event.target.value
-                                )
-                            }
-                            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-500/10"
-                        >
-                            <option value="">
-                                All Field Officers
-                            </option>
+                            <select
+                                id="field-officer-filter"
+                                value={currentFieldOfficer}
+                                onChange={(event) =>
+                                    updateFilter(
+                                        "fieldOfficer",
+                                        event.target.value
+                                    )
+                                }
+                                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-4 focus:ring-green-500/10"
+                            >
+                                <option value="">
+                                    All Field Officers
+                                </option>
 
-                            {fieldOfficers.map(
-                                (fieldOfficer) => (
-                                    <option
-                                        key={
-                                            fieldOfficer
-                                        }
-                                        value={
-                                            fieldOfficer
-                                        }
-                                    >
-                                        {
-                                            fieldOfficer
-                                        }
-                                    </option>
-                                )
-                            )}
-                        </select>
-                    </div>
+                                {fieldOfficers.map(
+                                    (fieldOfficer) => (
+                                        <option
+                                            key={fieldOfficer}
+                                            value={fieldOfficer}
+                                        >
+                                            {fieldOfficer}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </div>
+                    )}
 
                     {/* LGA */}
                     <div>

@@ -402,6 +402,8 @@ export default async function TrainingSessionsPage({
                             fieldOfficers
                         }
                         lgas={lgas}
+                        role={session.user.role}
+
                     />
 
                     {/* Summary */}
