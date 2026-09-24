@@ -138,7 +138,7 @@ export default function ChangePasswordForm() {
                 </div>
 
                 <div className="mb-4">
-                    <BackButton label="Back to Dashboard" />
+                    <BackButton label="Back" />
                 </div>
 
                 <h1 className="text-2xl font-bold tracking-tight text-slate-900">

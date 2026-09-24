@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import BackButton from "../../settings/BackButton"
 
 interface MaintenanceData {
     maintenanceMode: boolean;
@@ -189,8 +190,11 @@ export default function MaintenanceControl() {
 
     return (
         <div className="min-h-full bg-slate-50 p-6 lg:p-8">
-            <div className="mx-auto max-w-5xl">
+            <div className="my-5">
+                <BackButton />
+            </div>
 
+            <div className="mx-auto max-w-5xl">
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
@@ -238,22 +242,22 @@ export default function MaintenanceControl() {
                         {/* Status pill */}
                         <div
                             className={`inline-flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold shadow-sm ${isMaintenance
-                                    ? "border-orange-200 bg-orange-50 text-orange-700"
-                                    : "border-green-200 bg-green-50 text-green-700"
+                                ? "border-orange-200 bg-orange-50 text-orange-700"
+                                : "border-green-200 bg-green-50 text-green-700"
                                 }`}
                         >
                             <span className="relative flex h-2.5 w-2.5">
                                 <span
                                     className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-50 ${isMaintenance
-                                            ? "bg-orange-400"
-                                            : "bg-green-400"
+                                        ? "bg-orange-400"
+                                        : "bg-green-400"
                                         }`}
                                 />
 
                                 <span
                                     className={`relative inline-flex h-2.5 w-2.5 rounded-full ${isMaintenance
-                                            ? "bg-orange-500"
-                                            : "bg-green-500"
+                                        ? "bg-orange-500"
+                                        : "bg-green-500"
                                         }`}
                                 />
                             </span>
@@ -304,8 +308,8 @@ export default function MaintenanceControl() {
                             {/* Top accent */}
                             <div
                                 className={`h-1.5 ${isMaintenance
-                                        ? "bg-orange-500"
-                                        : "bg-green-500"
+                                    ? "bg-orange-500"
+                                    : "bg-green-500"
                                     }`}
                             />
 
@@ -317,8 +321,8 @@ export default function MaintenanceControl() {
 
                                         <div
                                             className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl ${isMaintenance
-                                                    ? "bg-orange-100"
-                                                    : "bg-green-100"
+                                                ? "bg-orange-100"
+                                                : "bg-green-100"
                                                 }`}
                                         >
                                             {isMaintenance ? (
@@ -377,8 +381,8 @@ export default function MaintenanceControl() {
 
                                             <h2
                                                 className={`mt-1 text-xl font-bold ${isMaintenance
-                                                        ? "text-orange-700"
-                                                        : "text-green-700"
+                                                    ? "text-orange-700"
+                                                    : "text-green-700"
                                                     }`}
                                             >
                                                 {isMaintenance
@@ -401,22 +405,22 @@ export default function MaintenanceControl() {
                                     {/* Availability */}
                                     <div
                                         className={`rounded-xl border p-5 ${isMaintenance
-                                                ? "border-orange-100 bg-orange-50/60"
-                                                : "border-green-100 bg-green-50/60"
+                                            ? "border-orange-100 bg-orange-50/60"
+                                            : "border-green-100 bg-green-50/60"
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
 
                                             <div
                                                 className={`flex h-9 w-9 items-center justify-center rounded-lg ${isMaintenance
-                                                        ? "bg-orange-100"
-                                                        : "bg-green-100"
+                                                    ? "bg-orange-100"
+                                                    : "bg-green-100"
                                                     }`}
                                             >
                                                 <svg
                                                     className={`h-4 w-4 ${isMaintenance
-                                                            ? "text-orange-600"
-                                                            : "text-green-600"
+                                                        ? "text-orange-600"
+                                                        : "text-green-600"
                                                         }`}
                                                     viewBox="0 0 24 24"
                                                     fill="none"
@@ -495,16 +499,16 @@ export default function MaintenanceControl() {
                                 {/* Notice */}
                                 <div
                                     className={`mt-6 rounded-xl border p-5 ${isMaintenance
-                                            ? "border-orange-200 bg-linear-to-r from-orange-50 to-amber-50"
-                                            : "border-green-200 bg-linear-to-r from-green-50 to-emerald-50"
+                                        ? "border-orange-200 bg-linear-to-r from-orange-50 to-amber-50"
+                                        : "border-green-200 bg-linear-to-r from-green-50 to-emerald-50"
                                         }`}
                                 >
                                     <div className="flex items-start gap-3">
 
                                         <div
                                             className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${isMaintenance
-                                                    ? "bg-orange-100"
-                                                    : "bg-green-100"
+                                                ? "bg-orange-100"
+                                                : "bg-green-100"
                                                 }`}
                                         >
                                             {isMaintenance ? (
@@ -547,8 +551,8 @@ export default function MaintenanceControl() {
                                         <div>
                                             <p
                                                 className={`text-sm font-semibold ${isMaintenance
-                                                        ? "text-orange-900"
-                                                        : "text-green-900"
+                                                    ? "text-orange-900"
+                                                    : "text-green-900"
                                                     }`}
                                             >
                                                 {isMaintenance
@@ -558,8 +562,8 @@ export default function MaintenanceControl() {
 
                                             <p
                                                 className={`mt-1 text-sm leading-6 ${isMaintenance
-                                                        ? "text-orange-800/80"
-                                                        : "text-green-800/80"
+                                                    ? "text-orange-800/80"
+                                                    : "text-green-800/80"
                                                     }`}
                                             >
                                                 {settings.message}
@@ -574,9 +578,9 @@ export default function MaintenanceControl() {
                                         type="button"
                                         onClick={handleToggle}
                                         disabled={updating}
-                                        className={`group relative flex w-full items-center justify-center gap-3 overflow-hidden rounded-xl px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${isMaintenance
-                                                ? "bg-green-600 hover:bg-green-700 focus:ring-green-500"
-                                                : "bg-orange-500 hover:bg-orange-600 focus:ring-orange-400"
+                                        className={`group relative flex w-full cursor-pointer items-center justify-center gap-3 overflow-hidden rounded-xl px-5 py-3.5 text-sm font-semibold text-white shadow-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${isMaintenance
+                                            ? "bg-green-600 hover:bg-green-700 focus:ring-green-500"
+                                            : "bg-orange-500 hover:bg-orange-600 focus:ring-orange-400"
                                             }`}
                                     >
                                         <span className="absolute inset-0 -translate-x-full bg-white/10 transition-transform duration-500 group-hover:translate-x-0" />
@@ -723,6 +727,6 @@ export default function MaintenanceControl() {
                     </>
                 )}
             </div>
-        </div>
+        </div >
     );
 }
