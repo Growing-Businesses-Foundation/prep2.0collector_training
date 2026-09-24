@@ -71,7 +71,7 @@ export default function TrainingFilters({
         currentToDate;
 
     const canFilterByFieldOfficer =
-        role === "ADMIN";
+        role !== "WRITE";
 
     return (
         <div className="mt-8 rounded-xl border border-gray-200 bg-white p-4 shadow-sm sm:p-5">
