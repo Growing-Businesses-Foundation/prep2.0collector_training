@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import BackButton from "../../settings/BackButton"
+import BackButton from "../../settings/BackButton";
 
 interface MaintenanceData {
     maintenanceMode: boolean;
@@ -21,6 +21,7 @@ export default function MaintenanceControl() {
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [maintenanceMessage, setMaintenanceMessage] = useState("");
 
     useEffect(() => {
         let cancelled = false;
@@ -46,6 +47,7 @@ export default function MaintenanceControl() {
 
                 if (!cancelled) {
                     setSettings(data.data);
+                    setMaintenanceMessage(data.data.message || "");
                     setError(null);
                     setLoading(false);
                 }
@@ -82,8 +84,7 @@ export default function MaintenanceControl() {
                         "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
-                        message:
-                            "The application is currently undergoing maintenance. Please check back later.",
+                        message: maintenanceMessage.trim(),
                     }),
                 }
             );
@@ -98,6 +99,7 @@ export default function MaintenanceControl() {
             }
 
             setSettings(data.data);
+            setMaintenanceMessage(data.data.message || "");
         } catch (err) {
             setError(
                 err instanceof Error
@@ -131,11 +133,72 @@ export default function MaintenanceControl() {
             }
 
             setSettings(data.data);
+            setMaintenanceMessage(data.data.message || "");
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
                     : "Failed to disable maintenance mode."
+            );
+        } finally {
+            setUpdating(false);
+        }
+    }
+
+    async function saveMaintenanceMessage() {
+        if (!settings || updating) {
+            return;
+        }
+
+        const message = maintenanceMessage.trim();
+
+        if (!message) {
+            setError("Maintenance message cannot be empty.");
+            return;
+        }
+
+        if (message.length > 500) {
+            setError("Maintenance message cannot exceed 500 characters.");
+            return;
+        }
+
+        if (message === settings.message) {
+            return;
+        }
+
+        try {
+            setUpdating(true);
+            setError(null);
+
+            const response = await fetch(
+                "/api/admin/maintenance",
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        message,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(
+                    data.message ||
+                    "Failed to update maintenance message."
+                );
+            }
+
+            setSettings(data.data);
+            setMaintenanceMessage(data.data.message || "");
+        } catch (err) {
+            setError(
+                err instanceof Error
+                    ? err.message
+                    : "Failed to update maintenance message."
             );
         } finally {
             setUpdating(false);
@@ -149,6 +212,20 @@ export default function MaintenanceControl() {
 
         if (settings.maintenanceMode) {
             await disableMaintenance();
+            return;
+        }
+
+        if (!maintenanceMessage.trim()) {
+            setError(
+                "Please enter a maintenance message before enabling maintenance mode."
+            );
+            return;
+        }
+
+        if (maintenanceMessage.trim().length > 500) {
+            setError(
+                "Maintenance message cannot exceed 500 characters."
+            );
             return;
         }
 
@@ -492,6 +569,155 @@ export default function MaintenanceControl() {
                                                     ).toLocaleString()}
                                                 </p>
                                             </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Maintenance message */}
+                                <div className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-orange-100">
+                                            <svg
+                                                className="h-5 w-5 text-orange-600"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="1.8"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M4.75 5.75h14.5a1 1 0 0 1 1 1v10.5a1 1 0 0 1-1 1H4.75a1 1 0 0 1-1-1V6.75a1 1 0 0 1 1-1Z"
+                                                />
+
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="m7 9 5 4 5-4"
+                                                />
+                                            </svg>
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                                                <div>
+                                                    <p className="text-sm font-semibold text-slate-800">
+                                                        Maintenance message
+                                                    </p>
+
+                                                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                        This message will be shown to users while maintenance
+                                                        mode is active.
+                                                    </p>
+                                                </div>
+
+                                                <span className="w-fit rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-orange-600">
+                                                    User-facing
+                                                </span>
+                                            </div>
+
+                                            <textarea
+                                                value={maintenanceMessage}
+                                                onChange={(event) =>
+                                                    setMaintenanceMessage(event.target.value)
+                                                }
+                                                disabled={updating}
+                                                rows={4}
+                                                maxLength={500}
+                                                placeholder="Enter the message users should see during maintenance..."
+                                                className="mt-4 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                                            />
+
+                                            <div className="mt-2 flex items-center justify-between">
+                                                <p className="text-xs text-slate-400">
+                                                    Keep the message clear and concise.
+                                                </p>
+
+                                                <span className="text-xs text-slate-400">
+                                                    {maintenanceMessage.length}/500
+                                                </span>
+                                            </div>
+
+                                            {isMaintenance && (
+                                                <div className="mt-4 flex flex-col gap-3 rounded-xl border border-green-100 bg-green-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-green-800">
+                                                            Update user-facing message
+                                                        </p>
+
+                                                        <p className="mt-1 text-xs leading-5 text-green-700">
+                                                            Changes will be visible to users immediately.
+                                                        </p>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={saveMaintenanceMessage}
+                                                        disabled={
+                                                            updating ||
+                                                            !maintenanceMessage.trim() ||
+                                                            maintenanceMessage.trim() === settings.message
+                                                        }
+                                                        className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        {updating ? (
+                                                            <>
+                                                                <svg
+                                                                    className="h-4 w-4 animate-spin"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                >
+                                                                    <circle
+                                                                        className="opacity-25"
+                                                                        cx="12"
+                                                                        cy="12"
+                                                                        r="9"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="3"
+                                                                    />
+
+                                                                    <path
+                                                                        className="opacity-90"
+                                                                        d="M21 12a9 9 0 0 1-9 9"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="3"
+                                                                        strokeLinecap="round"
+                                                                    />
+                                                                </svg>
+
+                                                                Saving...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <svg
+                                                                    className="h-4 w-4"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="none"
+                                                                    stroke="currentColor"
+                                                                    strokeWidth="2"
+                                                                >
+                                                                    <path
+                                                                        strokeLinecap="round"
+                                                                        strokeLinejoin="round"
+                                                                        d="M5 12.5 9.5 17 19 7"
+                                                                    />
+                                                                </svg>
+
+                                                                Save Message
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {isMaintenance && (
+                                                <div className="mt-3 rounded-lg border border-orange-100 bg-orange-50 px-3 py-2.5">
+                                                    <p className="text-xs leading-5 text-orange-800">
+                                                        Maintenance mode is active. You can update this message
+                                                        without disabling maintenance mode.
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
