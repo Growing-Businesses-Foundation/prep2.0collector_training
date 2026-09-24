@@ -18,6 +18,7 @@ export type AuditAction =
     | "COLLECTOR_UPDATED"
     | "MAINTENANCE_MODE_ENABLED"
     | "MAINTENANCE_MODE_DISABLED"
+    | "MAINTENANCE_MESSAGE_UPDATED"
 
 
 export interface AuditLog {

@@ -7,6 +7,7 @@ import {
     disableMaintenanceMode,
     enableMaintenanceMode,
     getMaintenanceSettings,
+    updateMaintenanceMessage,
 } from "@/lib/maintenance";
 import { logActivity } from "@/lib/audit";
 import { UserRole } from "@/lib/models/user";
@@ -129,6 +130,119 @@ export async function POST(request: NextRequest) {
             {
                 success: false,
                 message: "Failed to enable maintenance mode.",
+            },
+            { status: 500 }
+        );
+    }
+}
+
+
+/**
+ * PATCH
+ *
+ * Update the maintenance message without changing
+ * the current maintenance mode state.
+ *
+ * Request body:
+ *
+ * {
+ *     "message": "The application will be back at 11:00 PM."
+ * }
+ */
+export async function PATCH(request: NextRequest) {
+    const { user, error } = await requireRole(ADMIN_ROLES);
+
+    if (error) {
+        return error;
+    }
+
+    if (!user) {
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Authentication required.",
+            },
+            { status: 401 }
+        );
+    }
+
+    try {
+        const body = await request.json();
+
+        if (typeof body?.message !== "string") {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "A maintenance message is required.",
+                },
+                { status: 400 }
+            );
+        }
+
+        const message = body.message.trim();
+
+        if (!message) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Maintenance message cannot be empty.",
+                },
+                { status: 400 }
+            );
+        }
+
+        if (message.length > 500) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Maintenance message cannot exceed 500 characters.",
+                },
+                { status: 400 }
+            );
+        }
+
+        const settings = await updateMaintenanceMessage(
+            {
+                id: user.id,
+                name: user.name,
+                email: user.email,
+            },
+            message
+        );
+
+        await logActivity({
+            userId: user.id,
+            userName: user.name,
+            userEmail: user.email,
+            action: "MAINTENANCE_MESSAGE_UPDATED",
+            description: "Application maintenance message updated.",
+            metadata: {
+                maintenanceMode: settings.maintenanceMode,
+                message: settings.message,
+            },
+        });
+
+        return NextResponse.json({
+            success: true,
+            message: "Maintenance message updated successfully.",
+            data: {
+                maintenanceMode: settings.maintenanceMode,
+                message: settings.message,
+                updatedAt: settings.updatedAt,
+                updatedBy: settings.updatedBy ?? null,
+            },
+        });
+    } catch (error) {
+        console.error(
+            "Failed to update maintenance message:",
+            error
+        );
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to update maintenance message.",
             },
             { status: 500 }
         );

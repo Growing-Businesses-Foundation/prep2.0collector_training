@@ -101,6 +101,54 @@ export async function enableMaintenanceMode(
 }
 
 /**
+ * Update the maintenance message without changing maintenance mode.
+ */
+export async function updateMaintenanceMessage(
+    user: {
+        id: string;
+        name?: string | null;
+        email?: string | null;
+    },
+    message: string
+): Promise<MaintenanceSettings> {
+    const collection = await getSettingsCollection();
+
+    const currentSettings = await getMaintenanceSettings();
+
+    const trimmedMessage = message.trim();
+
+    if (!trimmedMessage) {
+        throw new Error("Maintenance message cannot be empty.");
+    }
+
+    const now = new Date();
+
+    const settings: MaintenanceSettings = {
+        ...currentSettings,
+        maintenanceMode: currentSettings.maintenanceMode,
+        message: trimmedMessage,
+        updatedAt: now,
+        updatedBy: {
+            id: user.id,
+            name: user.name ?? undefined,
+            email: user.email ?? undefined,
+        },
+    };
+
+    await collection.replaceOne(
+        {
+            _id: MAINTENANCE_ID,
+        },
+        settings,
+        {
+            upsert: true,
+        }
+    );
+
+    return settings;
+}
+
+/**
  * Disable application maintenance mode.
  */
 export async function disableMaintenanceMode(
@@ -112,12 +160,13 @@ export async function disableMaintenanceMode(
 ): Promise<MaintenanceSettings> {
     const collection = await getSettingsCollection();
 
+    const currentSettings = await getMaintenanceSettings();
+
     const now = new Date();
 
     const settings: MaintenanceSettings = {
-        _id: MAINTENANCE_ID,
+        ...currentSettings,
         maintenanceMode: false,
-        message: DEFAULT_MESSAGE,
         updatedAt: now,
         updatedBy: {
             id: user.id,
