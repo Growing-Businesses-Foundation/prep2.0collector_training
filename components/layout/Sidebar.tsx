@@ -1,3 +1,5 @@
+//components/layout/Sidebar.tsx
+
 "use client";
 
 import Link from "next/link";
@@ -127,7 +129,7 @@ function UserPlusIcon() {
     );
 }
 
-function KeyIcon() {
+function SettingsIcon() {
     return (
         <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -137,16 +139,15 @@ function KeyIcon() {
             strokeWidth="1.8"
             className="h-5 w-5"
         >
-            <circle cx="8" cy="15" r="4" />
             <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M11 12l8-8m0 0h-3m3 0v3"
+                d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
             />
             <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d="M14 9l2 2"
+                d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.94 1.94-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.75v-.09a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.94-1.94.06-.06A1.7 1.7 0 0 0 7.6 15a1.7 1.7 0 0 0-1.56-1.03H5.95v-2.75h.09A1.7 1.7 0 0 0 7.6 10.2a1.7 1.7 0 0 0-.34-1.88L7.2 8.26 9.14 6.32l.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56V5h2.75v.09a1.7 1.7 0 0 0 1.03 1.56 1.7 1.7 0 0 0 1.88-.34l.06-.06 1.94 1.94-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.56 1.03H20v2.75h-.09A1.7 1.7 0 0 0 19.4 15Z"
             />
         </svg>
     );
@@ -246,8 +247,8 @@ function NavItem({
             href={href}
             onClick={onClick}
             className={`group relative flex items-center gap-3 rounded-xl px-3 text-sm font-medium transition-all duration-200 ${active
-                    ? "bg-green-50 text-green-700 shadow-sm"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                ? "bg-green-50 text-green-700 shadow-sm"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                 }`}
         >
             {active && (
@@ -256,8 +257,8 @@ function NavItem({
 
             <span
                 className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition ${active
-                        ? "bg-green-600 text-white shadow-md shadow-green-600/20"
-                        : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
+                    ? "bg-green-600 text-white shadow-md shadow-green-600/20"
+                    : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
                     }`}
             >
                 {icon}
@@ -268,8 +269,8 @@ function NavItem({
             {badge && (
                 <span
                     className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${active
-                            ? "bg-green-100 text-green-700"
-                            : "bg-gray-100 text-gray-500"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-gray-100 text-gray-500"
                         }`}
                 >
                     {badge}
@@ -331,8 +332,8 @@ export default function Sidebar({
             {/* Sidebar */}
             <aside
                 className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-gray-200 bg-white shadow-xl shadow-gray-900/5 transition-transform duration-300 ease-out lg:static lg:z-auto lg:translate-x-0 lg:shadow-none ${mobileOpen
-                        ? "translate-x-0"
-                        : "-translate-x-full"
+                    ? "translate-x-0"
+                    : "-translate-x-full"
                     }`}
             >
                 {/* Brand */}
@@ -472,25 +473,25 @@ export default function Sidebar({
                         </div>
                     </div>
 
-                    {/* Change Password */}
+                    {/* Settings */}
                     <Link
-                        href="/account/change-password"
+                        href="/settings"
                         onClick={handleNavigation}
-                        className={`group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition-all duration-200 ${isActive("/account/change-password")
+                        className={`group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium transition-all duration-200 ${isActive("/settings")
                                 ? "bg-green-50 text-green-700"
                                 : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                             }`}
                     >
                         <span
-                            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${isActive("/account/change-password")
+                            className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${isActive("/settings")
                                     ? "bg-green-100 text-green-600"
                                     : "bg-gray-100 text-gray-500 group-hover:bg-green-50 group-hover:text-green-600"
                                 }`}
                         >
-                            <KeyIcon />
+                            <SettingsIcon />
                         </span>
 
-                        <span className="flex-1">Change Password</span>
+                        <span className="flex-1">Settings</span>
                     </Link>
 
                     {/* Logout */}
