@@ -500,7 +500,7 @@ export default function Sidebar({
                         onClick={() =>
                             signOut({ callbackUrl: "/login" })
                         }
-                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-gray-600 transition-all duration-200 hover:bg-red-50 hover:text-red-600"
+                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-medium text-gray-600 transition-all duration-200 hover:bg-red-50 hover:text-red-600 hover:cursor-pointer"
                     >
                         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition group-hover:bg-red-100 group-hover:text-red-600">
                             <LogOutIcon />

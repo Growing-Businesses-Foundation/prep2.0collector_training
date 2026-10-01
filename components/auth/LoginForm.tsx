@@ -255,7 +255,7 @@ export default function LoginForm() {
                                         fill="none"
                                         stroke="currentColor"
                                         strokeWidth="1.8"
-                                        className="h-5 w-5"
+                                        className="h-5 w-5 hover:cursor-pointer"
                                     >
                                         <path
                                             strokeLinecap="round"
@@ -280,7 +280,7 @@ export default function LoginForm() {
                                         fill="none"
                                         stroke="currentColor"
                                         strokeWidth="1.8"
-                                        className="h-5 w-5"
+                                        className="h-5 w-5 hover:cursor-pointer"
                                     >
                                         <path
                                             strokeLinecap="round"
@@ -339,7 +339,7 @@ export default function LoginForm() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="group relative w-full overflow-hidden rounded-xl bg-linear-to-r from-green-700 to-green-600 px-4 py-3.5 font-semibold text-white shadow-lg shadow-green-700/20 transition-all duration-200 hover:from-green-800 hover:to-green-700 hover:shadow-xl hover:shadow-green-700/25 focus:outline-none focus:ring-4 focus:ring-green-500/20 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                        className="group relative w-full overflow-hidden rounded-xl bg-linear-to-r from-green-700 to-green-600 px-4 py-3.5 font-semibold text-white shadow-lg shadow-green-700/20 transition-all duration-200 hover:from-green-800 hover:to-green-700 hover:shadow-xl hover:shadow-green-700/25 focus:outline-none focus:ring-4 focus:ring-green-500/20 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 hover:cursor-pointer"
                     >
                         <span className="relative flex items-center justify-center gap-2">
                             {loading ? (
@@ -395,7 +395,7 @@ export default function LoginForm() {
                 <div className="mt-8 border-t border-gray-100 pt-6 text-center">
                     <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
                         <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                        <span>Secure access</span>
+                        <span>Secure Access</span>
                         <span className="text-gray-300">
                             •
                         </span>
