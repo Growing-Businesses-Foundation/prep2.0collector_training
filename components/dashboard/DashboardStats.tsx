@@ -7,6 +7,7 @@ interface DashboardStatsProps {
 
     stats: {
         clustersTrained: number;
+        totalClusters: number;
         totalExpectedCollectors: number;
         totalCollectors: number;
         totalNewlyRecruitedCollectors: number;
@@ -154,9 +155,17 @@ export default function DashboardStats({
             iconColor: "text-green-600",
         },
         {
+            title: "Total No. of Clusters",
+            value: stats.totalClusters,
+            description: "Unique clusters registered",
+            icon: <TargetIcon />,
+            iconBg: "bg-blue-50",
+            iconColor: "text-blue-600",
+        },
+        {
             title: "Expected Collectors",
             value: stats.totalExpectedCollectors,
-            description: "Across all trainings",
+            description: "Across all clusters",
             icon: <TargetIcon />,
             iconBg: "bg-orange-50",
             iconColor: "text-orange-500",
@@ -201,8 +210,8 @@ export default function DashboardStats({
                 <div
                     key={card.title}
                     className={`group relative overflow-hidden rounded-2xl border p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${card.featured
-                            ? "border-green-600 bg-linear-to-br from-green-700 via-green-600 to-green-700 text-white shadow-lg shadow-green-700/15"
-                            : "border-gray-100 bg-white shadow-sm hover:border-green-100"
+                        ? "border-green-600 bg-linear-to-br from-green-700 via-green-600 to-green-700 text-white shadow-lg shadow-green-700/15"
+                        : "border-gray-100 bg-white shadow-sm hover:border-green-100"
                         }`}
                 >
                     {card.featured && (
@@ -217,8 +226,8 @@ export default function DashboardStats({
                             <div>
                                 <p
                                     className={`text-sm font-semibold ${card.featured
-                                            ? "text-green-50"
-                                            : "text-gray-500"
+                                        ? "text-green-50"
+                                        : "text-gray-500"
                                         }`}
                                 >
                                     {card.title}
@@ -226,8 +235,8 @@ export default function DashboardStats({
 
                                 <p
                                     className={`mt-3 text-3xl font-bold tracking-tight ${card.featured
-                                            ? "text-white"
-                                            : "text-gray-900"
+                                        ? "text-white"
+                                        : "text-gray-900"
                                         }`}
                                 >
                                     {card.value}
@@ -236,8 +245,8 @@ export default function DashboardStats({
 
                             <div
                                 className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${card.featured
-                                        ? "bg-white/15"
-                                        : card.iconBg
+                                    ? "bg-white/15"
+                                    : card.iconBg
                                     } ${card.iconColor}`}
                             >
                                 {card.icon}
@@ -246,8 +255,8 @@ export default function DashboardStats({
 
                         <div
                             className={`mt-4 flex items-center gap-2 border-t pt-3 ${card.featured
-                                    ? "border-white/15"
-                                    : "border-gray-100"
+                                ? "border-white/15"
+                                : "border-gray-100"
                                 }`}
                         >
                             {card.featured && (
@@ -256,8 +265,8 @@ export default function DashboardStats({
 
                             <p
                                 className={`text-xs font-medium ${card.featured
-                                        ? "text-green-100"
-                                        : "text-gray-400"
+                                    ? "text-green-100"
+                                    : "text-gray-400"
                                     }`}
                             >
                                 {card.description}

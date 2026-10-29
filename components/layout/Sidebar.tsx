@@ -401,13 +401,13 @@ export default function Sidebar({
 
                     {/* Training */}
                     <p className="mb-3 mt-8 px-2 text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">
-                        Training
+                        Cluster
                     </p>
 
                     <div className="space-y-1">
                         <NavItem
                             href="/training"
-                            label="Training Sessions"
+                            label="Cluster"
                             icon={<TrainingIcon />}
                             active={isActive("/training")}
                             onClick={handleNavigation}
@@ -416,7 +416,7 @@ export default function Sidebar({
                         {canManageTraining && (
                             <NavItem
                                 href="/training/new"
-                                label="New Training"
+                                label="New Cluster"
                                 icon={<PlusIcon />}
                                 active={isActive("/training/new")}
                                 onClick={handleNavigation}

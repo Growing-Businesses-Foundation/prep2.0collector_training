@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import BackButton from "../../settings/BackButton";
+import { useNotification } from "@/context/NotificationContext";
 
 interface MaintenanceData {
     maintenanceMode: boolean;
@@ -22,6 +23,9 @@ export default function MaintenanceControl() {
     const [updating, setUpdating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [maintenanceMessage, setMaintenanceMessage] = useState("");
+    const [showEnableConfirmation, setShowEnableConfirmation] =
+        useState(false);
+    const { notify } = useNotification();
 
     useEffect(() => {
         let cancelled = false;
@@ -100,12 +104,23 @@ export default function MaintenanceControl() {
 
             setSettings(data.data);
             setMaintenanceMessage(data.data.message || "");
+            notify.success({
+                title: "Maintenance mode enabled",
+                message: "Maintenance mode is now enabled.",
+            });
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
                     : "Failed to enable maintenance mode."
             );
+            notify.error({
+                title: "Failed to enable maintenance mode",
+                message:
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to enable maintenance mode.",
+            });
         } finally {
             setUpdating(false);
         }
@@ -134,12 +149,23 @@ export default function MaintenanceControl() {
 
             setSettings(data.data);
             setMaintenanceMessage(data.data.message || "");
+            notify.success({
+                title: "Maintenance mode disabled",
+                message: "Maintenance mode is now disabled.",
+            });
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
                     : "Failed to disable maintenance mode."
             );
+            notify.error({
+                title: "Failed to disable maintenance mode",
+                message:
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to disable maintenance mode.",
+            });
         } finally {
             setUpdating(false);
         }
@@ -194,12 +220,23 @@ export default function MaintenanceControl() {
 
             setSettings(data.data);
             setMaintenanceMessage(data.data.message || "");
+            notify.success({
+                title: "Maintenance message updated",
+                message: "Your maintenance message has been saved.",
+            });
         } catch (err) {
             setError(
                 err instanceof Error
                     ? err.message
                     : "Failed to update maintenance message."
             );
+            notify.error({
+                title: "Failed to update maintenance message",
+                message:
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to update maintenance message.",
+            });
         } finally {
             setUpdating(false);
         }
@@ -229,14 +266,11 @@ export default function MaintenanceControl() {
             return;
         }
 
-        const confirmed = window.confirm(
-            "Are you sure you want to enable maintenance mode? Regular users will no longer be able to access the application."
-        );
+        setShowEnableConfirmation(true);
+    }
 
-        if (!confirmed) {
-            return;
-        }
-
+    async function confirmEnableMaintenance() {
+        setShowEnableConfirmation(false);
         await enableMaintenance();
     }
 
@@ -348,7 +382,12 @@ export default function MaintenanceControl() {
 
                 {/* Error */}
                 {error && (
-                    <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm">
+                    <div
+                        aria-atomic="true"
+                        aria-live="assertive"
+                        className="mb-6 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm"
+                        role="alert"
+                    >
                         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100">
                             <svg
                                 className="h-4 w-4 text-red-600"
@@ -367,10 +406,10 @@ export default function MaintenanceControl() {
 
                         <div>
                             <p className="text-sm font-semibold text-red-800">
-                                Unable to update maintenance mode
+                                Maintenance settings need attention
                             </p>
 
-                            <p className="mt-1 text-sm text-red-700">
+                            <p className="mt-1 wrap-break-word text-sm text-red-700">
                                 {error}
                             </p>
                         </div>
@@ -618,9 +657,12 @@ export default function MaintenanceControl() {
 
                                             <textarea
                                                 value={maintenanceMessage}
-                                                onChange={(event) =>
-                                                    setMaintenanceMessage(event.target.value)
-                                                }
+                                                onChange={(event) => {
+                                                    setMaintenanceMessage(event.target.value);
+                                                    if (error) {
+                                                        setError(null);
+                                                    }
+                                                }}
                                                 disabled={updating}
                                                 rows={4}
                                                 maxLength={500}
@@ -953,6 +995,72 @@ export default function MaintenanceControl() {
                     </>
                 )}
             </div>
+            {showEnableConfirmation && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+                    onClick={() => setShowEnableConfirmation(false)}
+                >
+                    <section
+                        aria-labelledby="enable-maintenance-title"
+                        aria-modal="true"
+                        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/10 sm:p-7"
+                        onClick={(event) => event.stopPropagation()}
+                        role="dialog"
+                    >
+                        <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100">
+                                <svg
+                                    aria-hidden="true"
+                                    className="h-6 w-6 text-orange-600"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        d="M12 9v4m0 4h.01M10.3 3.6 2.8 17a1.5 1.5 0 0 0 1.3 2.25h15.8a1.5 1.5 0 0 0 1.3-2.25L13.7 3.6a2 2 0 0 0-3.4 0Z"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
+                                </svg>
+                            </div>
+
+                            <div>
+                                <h2
+                                    className="text-lg font-semibold text-slate-900"
+                                    id="enable-maintenance-title"
+                                >
+                                    Enable maintenance mode?
+                                </h2>
+                                <p className="mt-2 text-sm leading-6 text-slate-600">
+                                    Are you sure you want to enable maintenance
+                                    mode? Regular users will no longer be able to
+                                    access the application.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button
+                                className="cursor-pointer rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
+                                onClick={() =>
+                                    setShowEnableConfirmation(false)
+                                }
+                                type="button"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="cursor-pointer rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+                                onClick={confirmEnableMaintenance}
+                                type="button"
+                            >
+                                Enable maintenance
+                            </button>
+                        </div>
+                    </section>
+                </div>
+            )}
         </div >
     );
 }
