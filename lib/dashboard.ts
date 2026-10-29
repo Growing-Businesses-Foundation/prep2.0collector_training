@@ -164,8 +164,15 @@ export async function getDashboardData(
     // TRAINING SESSION STATISTICS
     // --------------------------------------------------
 
-    const clustersTrained =
-        sessionsWithStatus.length;
+    const clustersTrained = sessionsWithStatus.length;
+
+    // Count unique clusters using cluster name and location.
+    const totalClusters = new Set(
+        sessionsWithStatus
+            .map((training) => training.clusterName?.trim())
+            .filter((name): name is string => Boolean(name))
+            .map((name) => name.toLowerCase())
+    ).size;
 
     const totalExpectedCollectors =
         sessionsWithStatus.reduce(
@@ -288,6 +295,8 @@ export async function getDashboardData(
     return {
         stats: {
             clustersTrained,
+
+            totalClusters,
 
             totalExpectedCollectors,
 

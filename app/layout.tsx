@@ -12,6 +12,7 @@ import { getMaintenanceSettings } from "@/lib/maintenance";
 import { authOptions } from "@/lib/auth";
 import clientPromise from "@/lib/mongodb";
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],

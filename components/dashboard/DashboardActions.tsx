@@ -177,7 +177,7 @@ function ActionCard({
         <button
             type="button"
             onClick={onClick}
-            className={`group relative overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${style.hover}`}
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl border border-gray-100 bg-white p-5 text-left shadow-sm transition-all duration-200 hover:-translate-y-1 hover:shadow-lg ${style.hover}`}
         >
             {/* Accent bar */}
             <div
