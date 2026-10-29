@@ -18,11 +18,11 @@ declare global {
 };
 
 function createMongoClient(): Promise<MongoClient> {
-    const uri = process.env.LOCAL_MONGODB_URI;
+    const uri = process.env.MONGODB_URI;
 
     if (!uri) {
         throw new Error(
-            "Please define LOCAL_MONGODB_URI in your environment variables."
+            "Please define MONGODB_URI in your environment variables."
         );
     }
 
