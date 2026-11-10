@@ -1015,8 +1015,8 @@ export default function TrainingForm({
                         icon={
                             <CalendarIcon />
                         }
-                        title="Training Information"
-                        description="Enter the details for this collector training session."
+                        title="Cluster Training Information"
+                        description="Enter the details for this collector Cluster."
                     />
 
                     <div className="grid gap-5 md:grid-cols-2">
@@ -1281,12 +1281,12 @@ export default function TrainingForm({
 
                             <div>
                                 <p className="text-sm font-semibold text-orange-800">
-                                    Training progress
+                                    Cluster progress
                                     is automatic
                                 </p>
 
                                 <p className="mt-0.5 text-xs leading-5 text-orange-700">
-                                    The training
+                                    The Cluster
                                     status will
                                     be calculated
                                     automatically
@@ -1311,11 +1311,11 @@ export default function TrainingForm({
                         icon={
                             <CameraIcon />
                         }
-                        title="Training Evidence"
+                        title="Cluster Evidence"
                         description={
                             mode ===
                                 "edit"
-                                ? "Keep the existing training evidence or upload a new photo if you need to replace it."
+                                ? "Keep the existing cluster evidence or upload a new photo if you need to replace it."
                                 : "Take a new photo with your camera or choose an existing image from your device."
                         }
                     />
@@ -1359,11 +1359,11 @@ export default function TrainingForm({
                                 </div>
 
                                 <p className="text-sm font-semibold text-gray-800">
-                                    Add training evidence
+                                    Add cluster evidence
                                 </p>
 
                                 <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-gray-500">
-                                    Take a new photo of the training session
+                                    Take a new photo of the cluster training session
                                     or select an existing image from your phone.
                                 </p>
 
@@ -1406,12 +1406,12 @@ export default function TrainingForm({
 
                                 <div>
                                     <p className="text-xs font-semibold text-orange-800">
-                                        Training evidence is required
+                                        Cluster training evidence is required
                                     </p>
 
                                     <p className="mt-0.5 text-xs leading-5 text-orange-700">
                                         Please ensure the photo clearly shows
-                                        the training session and venue.
+                                        the cluster training session and venue.
                                     </p>
                                 </div>
                             </div>
@@ -1522,12 +1522,12 @@ export default function TrainingForm({
 
                                     <div className="min-w-0">
                                         <p className="text-sm font-semibold text-gray-800">
-                                            Existing training evidence
+                                            Existing cluster evidence
                                         </p>
 
                                         <p className="mt-0.5 text-xs leading-5 text-gray-500">
                                             This photo will remain attached to
-                                            this training session.
+                                            this cluster.
                                         </p>
                                     </div>
                                 </div>
@@ -1595,8 +1595,8 @@ export default function TrainingForm({
                         icon={
                             <LocationIcon />
                         }
-                        title="Training Location"
-                        description="Capture the GPS coordinates of the training venue."
+                        title="Cluster Location"
+                        description="Capture the GPS coordinates of the cluster venue."
                     />
 
                     <div className="rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
@@ -1717,7 +1717,7 @@ export default function TrainingForm({
                     <div>
                         <p className="text-sm font-bold text-gray-900">
                             Ready to save this
-                            training?
+                            cluster?
                         </p>
 
                         <p className="mt-1 text-xs text-gray-500">
@@ -1738,12 +1738,12 @@ export default function TrainingForm({
                         {submitting ? (
                             <>
                                 <Spinner />
-                                Saving Training...
+                                Saving Cluster...
                             </>
                         ) : (
                             <>
                                 <SaveIcon />
-                                Save Training
+                                Save Cluster
                             </>
                         )}
                     </button>

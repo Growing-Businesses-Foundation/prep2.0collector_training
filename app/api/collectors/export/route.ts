@@ -353,7 +353,7 @@ export async function GET(
                         "RESTRICTED_READ_ONLY"
                         ? {
                             "Collector ID":
-                                collector._id.toString(),
+                                collector.collectorId.toString(),
                         }
                         : {}),
 

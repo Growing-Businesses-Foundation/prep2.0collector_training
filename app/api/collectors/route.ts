@@ -1,5 +1,8 @@
+//app/api/collectors/route.ts
+
 import { NextResponse } from "next/server";
 import { ObjectId } from "mongodb";
+import { generateCollectorId } from "@/lib/collector-id";
 
 import clientPromise from "@/lib/mongodb";
 import { requireRole } from "@/lib/auth-utils";
@@ -191,8 +194,14 @@ export async function POST(request: Request) {
         }
 
         // Save collector
+
+        // Generate a globally unique collector ID
+        const collectorId = await generateCollectorId(db);
+
+        // Save collector
         try {
             const result = await db.collection("collectors").insertOne({
+                collectorId,
                 trainingSessionId: new ObjectId(trainingSessionId),
                 fullName: fullName.trim(),
                 gender,
@@ -210,8 +219,9 @@ export async function POST(request: Request) {
                 action: "COLLECTOR_CREATED",
                 resource: "collector",
                 resourceId: result.insertedId.toString(),
-                description: `Added collector to training session ${trainingSessionId}`,
+                description: `Added collector ${collectorId} to training session ${trainingSessionId}`,
                 metadata: {
+                    collectorId,
                     trainingSessionId,
                     gender,
                     newlyRecruited,
@@ -223,6 +233,7 @@ export async function POST(request: Request) {
              * based on the number of collectors recorded.
              */
             const newRecordedCollectors = recordedCollectors + 1;
+
             const expectedCollectors = Number(
                 trainingSession.expectedCollectors || 0
             );
@@ -252,12 +263,13 @@ export async function POST(request: Request) {
             return NextResponse.json({
                 success: true,
                 message: "Collector recorded successfully.",
-                collectorId: result.insertedId.toString(),
+                collectorId,
+                mongoId: result.insertedId.toString(),
                 trainingStatus,
                 recordedCollectors: newRecordedCollectors,
             });
+
         } catch (insertError) {
-            // Database-level duplicate protection
             if (
                 insertError &&
                 typeof insertError === "object" &&
