@@ -292,7 +292,7 @@ export default function TrainingFilters({
                 <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-gray-500">
                         Use the filters to narrow down
-                        training sessions.
+                        clusters.
                     </p>
 
                     {hasFilters ? (

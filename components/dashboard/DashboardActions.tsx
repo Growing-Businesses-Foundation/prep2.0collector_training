@@ -248,8 +248,8 @@ export default function DashboardActions({
             >
                 {canWrite && (
                     <ActionCard
-                        title="New Training Session"
-                        description="Create a new training session and record its location and evidence."
+                        title="New Cluster"
+                        description="Create a new cluster and record its location and evidence."
                         icon={<TrainingPlusIcon />}
                         variant="green"
                         onClick={() =>
@@ -261,7 +261,7 @@ export default function DashboardActions({
                 {canWrite && (
                     <ActionCard
                         title="Add Collector"
-                        description="Record a collector against an existing training session."
+                        description="Record a collector against an existing cluster."
                         icon={<UserPlusIcon />}
                         variant="orange"
                         onClick={() =>
@@ -271,11 +271,11 @@ export default function DashboardActions({
                 )}
 
                 <ActionCard
-                    title="Training Sessions"
+                    title="Cluster"
                     description={
                         canWrite
-                            ? "View and manage recorded training sessions."
-                            : "View recorded training sessions."
+                            ? "View and manage recorded cluster."
+                            : "View recorded cluster."
                     }
                     icon={<TrainingIcon />}
                     variant="neutral"
